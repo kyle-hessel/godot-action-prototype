@@ -33,7 +33,7 @@ func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
-#fluctuating framerate-based delta time
+# fluctuating framerate-based delta time
 func _process(delta: float) -> void:
 	pass
 

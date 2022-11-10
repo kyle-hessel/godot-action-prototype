@@ -1,9 +1,21 @@
-[gd_scene load_steps=3 format=3 uid="uid://cvpuvu8rd68eu"]
+[gd_scene load_steps=6 format=3 uid="uid://cvpuvu8rd68eu"]
 
 [ext_resource type="PackedScene" uid="uid://fucdrtw3uvta" path="res://scenes/player.tscn" id="1_dha7o"]
+[ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/water.tres" id="2_20y4g"]
 
 [sub_resource type="Environment" id="Environment_ph5ts"]
 sdfgi_use_occlusion = true
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yots1"]
+render_priority = 0
+shader = ExtResource("2_20y4g")
+shader_parameter/ColorParameter = null
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_6urk2"]
+material = SubResource("ShaderMaterial_yots1")
+size = Vector2(40, 40)
+subdivide_width = 20
+subdivide_depth = 20
 
 [node name="Main" type="Node3D"]
 
@@ -23,3 +35,12 @@ transform = Transform3D(1, 0, 0, 0, -0.0683287, 0.997663, 0, -0.997663, -0.06832
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 5.2542)
 use_collision = true
 size = Vector3(12.0728, 8, 1)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.1284, -1.23072, 0)
+mesh = SubResource("PlaneMesh_6urk2")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39.4025, 0, 0)
+use_collision = true
+size = Vector3(22.5097, 5.84383, 7.78585)
