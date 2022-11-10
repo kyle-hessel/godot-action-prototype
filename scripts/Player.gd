@@ -7,7 +7,7 @@ var player_speed_current: float = 0.0
 @export var player_walk_accel_rate: float = 4
 @export var player_run_accel_rate: float = 6
 @export var player_decel_rate: float = 1.2
-@export var player_rotation_rate: float = 8.0
+@export var player_rotation_rate: float = 9.0
 @export var jump_velocity: float = 4.5
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 0.05
@@ -41,7 +41,7 @@ func _physics_process(delta: float) -> void:
 	
 	if direction:
 		
-		# player rotation relative to camera
+		# player mesh rotation relative to camera. note: the entire player never rotates: only the spring arm or the mesh.
 		if $PlayerMeshCapsule.rotation.y != $SpringArm3D.rotation.y:
 			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
 			$PlayerMeshCapsule.rotation.y = move_toward($PlayerMeshCapsule.rotation.y, $SpringArm3D.rotation.y, player_rotation_rate * delta)
@@ -64,27 +64,33 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, player_speed_walk_max * player_decel_rate * delta)
 		
 	# debug
-	print(player_speed_current)
+	#print(player_speed_current)
 	
 	
 	### CAMERA ###
 		
-	# controller player rotation
+	# controller spring arm rotation
 	$SpringArm3D.rotate_y(Input.get_action_strength("player_turn_left_joystick") * joystick_sensitivity)
 	$SpringArm3D.rotate_y(Input.get_action_strength("player_turn_right_joystick") * -joystick_sensitivity)
 
 	# processes collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
-	@warning_ignore(return_value_discarded)
+	@warning_ignore(return_value_discarded) # makes debugger shut up
 	move_and_slide()
 	
 func _input(event):
 	
 	### CAMERA ###
 	
-	# mouse player rotation
+	# mouse spring arm rotation
 	if (event is InputEventMouseMotion):
-		# mouse x movement (in 2d monitor space) becomes spring arm rotation in 3D space around the Y axis.
+		# mouse x movement (in 2d monitor space) becomes spring arm rotation in 3D space around the Y axis - left/right rotation.
 		$SpringArm3D.rotation.y -= event.relative.x / 1000 * mouse_sensitivity
+		# mouse y movement (in 2d monitor space) becomes spring arm rotation in 3D space around the X axis - up/down rotation.
+		$SpringArm3D.rotation.x -= event.relative.y / 1000 * mouse_sensitivity
+		$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3) # clamp the value to avoid full rotation.
+		
+		# debug
+		print($SpringArm3D.rotation.x)
 
 
 
