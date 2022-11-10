@@ -1,9 +1,14 @@
 extends CharacterBody3D
 
 
-@export var SPEED: float = 5.0
-@export var JUMP_VELOCITY: float = 4.5
-@export var sensitivity = 2.5
+var player_speed_current: float = 0.0
+@export var player_speed_walk_max: float = 5.0
+@export var player_speed_run_max: float = player_speed_walk_max * 1.5
+@export var player_walk_accel_rate: float = 0.25
+@export var player_run_accel_rate: float = 0.5
+@export var jump_velocity: float = 4.5
+@export var mouse_sensitivity: float = 2.5
+@export var joystick_sensitivity: float = 0.05
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -13,40 +18,61 @@ func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _physics_process(delta: float) -> void:
-	# Add the gravity.
+	
+	### MOVEMENT ###
+	
+	# Apply gravity when in midair.
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	# Handle Jump.
-	if Input.is_action_just_pressed("Jump") and is_on_floor():
-		velocity.y = JUMP_VELOCITY
+	# Jump.
+	if Input.is_action_just_pressed("jump") and is_on_floor():
+		velocity.y = jump_velocity
 
-	# Get the input direction and handle the movement/deceleration.
-	# As good practice, you should replace UI actions with custom gameplay actions.
-	var input_dir := Input.get_vector("Left", "Right", "Forward", "Backward")
+	# Get the input direction.
+	var input_dir := Input.get_vector("left", "right", "forward", "backward")
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	
 	if direction:
-		velocity.x = direction.x * SPEED
-		velocity.z = direction.z * SPEED
+		
+		#acceleration
+		if player_speed_current < player_speed_walk_max:
+			player_speed_current += player_walk_accel_rate
+		elif player_speed_current > player_speed_walk_max:
+			player_speed_current = player_speed_walk_max
+		
+		# apply movement
+		velocity.x = direction.x * player_speed_current
+		velocity.z = direction.z * player_speed_current
 	else:
-		velocity.x = move_toward(velocity.x, 0, SPEED)
-		velocity.z = move_toward(velocity.z, 0, SPEED)
+		
+		# deceleration
+		player_speed_current = 0
+		
+		velocity.x = move_toward(velocity.x, 0, player_speed_walk_max * 0.05)
+		velocity.z = move_toward(velocity.z, 0, player_speed_walk_max * 0.05)
+		
+	# debug
+	print(player_speed_current)
+	
+	
+	### CAMERA ###
+		
+	# controller camera rotation
+	rotate_y(Input.get_action_strength("camera_joystick_left") * joystick_sensitivity)
+	rotate_y(Input.get_action_strength("camera_joystick_right") * -joystick_sensitivity)
 
 	move_and_slide()
 	
 func _input(event):
-	# mouse movement inputs
+	
+	
+	### CAMERA ###
+	
+	# mouse camera rotation
 	if (event is InputEventMouseMotion):
 		# mouse x movement (in 2d monitor space) becomes player rotation in 3D space around the Y axis.
-		rotation.y -= event.relative.x / 1000 * sensitivity
-		# mouse y movement (in 2d monitor space) becomes camera's up and down rotation around the X axis.
-		#$Camera3D.rotation.x -= event.relative.y / 1000 * sensitivity
-		# clamp player's x rotation.
-		rotation.x = clamp(rotation.x, PI / -2, PI / 2)
-		# clamp camera's x rotation.
-		#$Camera3D.rotation.x = clamp($Camera3D.rotation.x, -2, 2)
-
+		rotation.y -= event.relative.x / 1000 * mouse_sensitivity
 
 
 
