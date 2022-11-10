@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://fucdrtw3uvta"]
+[gd_scene load_steps=6 format=3 uid="uid://fucdrtw3uvta"]
 
 [ext_resource type="Script" path="res://scripts/Player.gd" id="1_nm7dn"]
 
@@ -10,6 +10,9 @@
 radius = 0.3
 height = 0.6
 
+[sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_xx8bg"]
+slide_on_slope = true
+
 [node name="Player" type="CharacterBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05848, -4.77532)
 script = ExtResource("1_nm7dn")
@@ -20,9 +23,14 @@ shape = SubResource("CapsuleShape3D_j7t00")
 [node name="PlayerMeshCapsule" type="MeshInstance3D" parent="."]
 mesh = SubResource("CapsuleMesh_e07yc")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="PlayerMeshCapsule"]
+[node name="PlayerMeshFront" type="MeshInstance3D" parent="PlayerMeshCapsule"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.404529, -0.354545)
 mesh = SubResource("SphereMesh_3y76t")
 
-[node name="PlayerCam" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.951819, 0.306659, 0, -0.306659, 0.951819, 0, 2.72658, 6.76776)
+[node name="SpringArm3D" type="SpringArm3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.966475, 0.256762, 0, -0.256762, 0.966475, 0, 0, 0)
+shape = SubResource("SeparationRayShape3D_xx8bg")
+spring_length = 10.0
+
+[node name="PlayerCam" type="Camera3D" parent="SpringArm3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)

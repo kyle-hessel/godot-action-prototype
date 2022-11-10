@@ -7,6 +7,7 @@ var player_speed_current: float = 0.0
 @export var player_walk_accel_rate: float = 4
 @export var player_run_accel_rate: float = 6
 @export var player_decel_rate: float = 1.2
+@export var player_rotation_rate: float = 8.0
 @export var jump_velocity: float = 4.5
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 0.05
@@ -35,9 +36,15 @@ func _physics_process(delta: float) -> void:
 
 	# Get the input direction.
 	var input_dir := Input.get_vector("left", "right", "forward", "backward")
-	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	# set direction to always face forward, relative to where the camera's spring arm is positioned.
+	var direction: Vector3 = ($SpringArm3D.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	
 	if direction:
+		
+		# player rotation relative to camera
+		if $PlayerMeshCapsule.rotation.y != $SpringArm3D.rotation.y:
+			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
+			$PlayerMeshCapsule.rotation.y = move_toward($PlayerMeshCapsule.rotation.y, $SpringArm3D.rotation.y, player_rotation_rate * delta)
 		
 		#acceleration
 		if player_speed_current < player_speed_walk_max:
@@ -63,21 +70,21 @@ func _physics_process(delta: float) -> void:
 	### CAMERA ###
 		
 	# controller player rotation
-	rotate_y(Input.get_action_strength("player_turn_left_joystick") * joystick_sensitivity)
-	rotate_y(Input.get_action_strength("player_turn_right_joystick") * -joystick_sensitivity)
+	$SpringArm3D.rotate_y(Input.get_action_strength("player_turn_left_joystick") * joystick_sensitivity)
+	$SpringArm3D.rotate_y(Input.get_action_strength("player_turn_right_joystick") * -joystick_sensitivity)
 
 	# processes collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
+	@warning_ignore(return_value_discarded)
 	move_and_slide()
 	
 func _input(event):
-	
 	
 	### CAMERA ###
 	
 	# mouse player rotation
 	if (event is InputEventMouseMotion):
-		# mouse x movement (in 2d monitor space) becomes player rotation in 3D space around the Y axis.
-		rotation.y -= event.relative.x / 1000 * mouse_sensitivity
+		# mouse x movement (in 2d monitor space) becomes spring arm rotation in 3D space around the Y axis.
+		$SpringArm3D.rotation.y -= event.relative.x / 1000 * mouse_sensitivity
 
 
 

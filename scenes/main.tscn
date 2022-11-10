@@ -7,7 +7,7 @@ sdfgi_use_occlusion = true
 
 [node name="Main" type="Node3D"]
 
-[node name="CSGBox3D" type="CSGBox3D" parent="."]
+[node name="Floor" type="CSGBox3D" parent="."]
 use_collision = true
 size = Vector3(40.4731, 0.0906145, 44.8961)
 
@@ -18,3 +18,8 @@ environment = SubResource("Environment_ph5ts")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.0683287, 0.997663, 0, -0.997663, -0.0683287, 0, 18.2324, 0)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 5.2542)
+use_collision = true
+size = Vector3(12.0728, 8, 1)
