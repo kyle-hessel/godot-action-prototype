@@ -17,7 +17,7 @@ var last_visible_chunks = []
 func _ready() -> void:
 	# init
 	chunks_visible = roundi(view_distance / chunk_size)
-	set_wireframe()
+	#set_wireframe()
 	update_visible_chunks()
 
 

@@ -34,3 +34,4 @@ spring_length = 10.0
 
 [node name="PlayerCam" type="Camera3D" parent="SpringArm3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+cull_mask = 524287
