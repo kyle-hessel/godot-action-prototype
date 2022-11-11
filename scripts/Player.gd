@@ -6,7 +6,7 @@ var player_speed_current: float = 0.0
 @export var player_speed_sprint_max: float = player_speed_walk_max * 2.0
 @export var player_walk_accel_rate: float = 4
 @export var player_sprint_accel_rate: float = 7
-@export var player_decel_rate: float = 10
+@export var player_decel_rate: float = 12
 @export var player_rotation_rate: float = 9.0
 @export var jump_velocity: float = 7
 @export var max_jumps: int = 2
@@ -106,7 +106,7 @@ func apply_player_lateral_movement(delta) -> void:
 func calculate_player_speed(delta) -> void:
 	
 	# determine movement state (sprinting or walking)
-	if (Input.is_action_pressed("sprint") and is_on_floor()):
+	if (Input.is_action_pressed("sprint")):
 		movement_state = PlayerMovementState.SPRINT
 	else:
 		movement_state = PlayerMovementState.WALK

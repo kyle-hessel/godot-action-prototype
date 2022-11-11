@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3 uid="uid://biyends45ljvn"]
+
+[ext_resource type="Material" uid="uid://b5wqjd170qw4o" path="res://materials/default_terrain_material.tres" id="1_8k62t"]
+[ext_resource type="Script" path="res://scripts/chunk.gd" id="1_mf5f2"]
+
+[node name="Chunk" type="MeshInstance3D"]
+material_override = ExtResource("1_8k62t")
+script = ExtResource("1_mf5f2")
