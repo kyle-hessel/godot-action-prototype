@@ -83,8 +83,22 @@ func apply_player_lateral_movement(delta) -> void:
 	
 	# Get the input direction.
 	var input_dir := Input.get_vector("left", "right", "forward", "backward")
-	# set direction to always face forward, relative to where the camera's spring arm is positioned. note: this makes movement slower when looking down w/ cam
-	var direction: Vector3 = ($SpringArm3D.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	
+	# set direction to always face forward, relative to where the camera's spring arm is positioned.
+	# also, remove any vertical camera data from both x and z axis Vec3's to ensure that camera height doesn't effect speed.
+	var direction_x: Vector3 = $SpringArm3D.transform.basis.x
+	direction_x.y = 0
+	direction_x = direction_x.normalized() * input_dir.x # x-axis input == 3D x axis (left/right)
+	
+	var direction_z: Vector3 = $SpringArm3D.transform.basis.z
+	direction_z.y = 0
+	direction_z = direction_z.normalized() * input_dir.y # y-axis input == 3D z axis (forward/back)
+	
+	#recombine separated direction vectors back into one.
+	var direction: Vector3 = direction_x + direction_z
+	
+	if direction.length() > 1.0:
+		direction = direction.normalized()
 	
 	# if we have input, do something.
 	if direction:
@@ -94,7 +108,7 @@ func apply_player_lateral_movement(delta) -> void:
 		velocity.x = direction.x * player_speed_current
 		velocity.z = direction.z * player_speed_current
 		
-		# player mesh rotation relative to camera. note: the entire player never rotates: only the spring arm or the mesh.
+		# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
 		if $PlayerMeshCapsule.rotation.y != $SpringArm3D.rotation.y:
 			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
 			$PlayerMeshCapsule.rotation.y = lerp_angle($PlayerMeshCapsule.rotation.y, atan2(-velocity.x, -velocity.z), player_rotation_rate * delta)
