@@ -94,6 +94,11 @@ func apply_player_lateral_movement(delta) -> void:
 		velocity.x = direction.x * player_speed_current
 		velocity.z = direction.z * player_speed_current
 		
+		# player mesh rotation relative to camera. note: the entire player never rotates: only the spring arm or the mesh.
+		if $PlayerMeshCapsule.rotation.y != $SpringArm3D.rotation.y:
+			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
+			$PlayerMeshCapsule.rotation.y = lerp_angle($PlayerMeshCapsule.rotation.y, atan2(-velocity.x, -velocity.z), player_rotation_rate * delta)
+		
 	# if there's no input, decelerate or do nothing.
 	else:
 		stop_player_movement(delta)
@@ -110,11 +115,6 @@ func calculate_player_speed(delta) -> void:
 		movement_state = PlayerMovementState.SPRINT
 	else:
 		movement_state = PlayerMovementState.WALK
-		
-	# player mesh rotation relative to camera. note: the entire player never rotates: only the spring arm or the mesh.
-	if $PlayerMeshCapsule.rotation.y != $SpringArm3D.rotation.y:
-		# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
-		$PlayerMeshCapsule.rotation.y = move_toward($PlayerMeshCapsule.rotation.y, $SpringArm3D.rotation.y, player_rotation_rate * delta)
 		
 	# acceleration, based on movement state
 	if (movement_state == PlayerMovementState.WALK):
