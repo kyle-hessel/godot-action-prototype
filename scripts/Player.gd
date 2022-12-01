@@ -52,8 +52,13 @@ func _physics_process(delta: float) -> void:
 	# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
 	apply_player_lateral_movement(delta)
 	
+	#print(velocity.length())
+	
 	# Camera
 	rotate_cam_joypad()
+	
+	# Set the player's animation tree blending value equal to the player's current speed.
+	$hooded_character/AnimationTree.set("parameters/IdleWalkRun/blend_position", velocity.length())
 
 	# Collisions
 	@warning_ignore(return_value_discarded) # makes debugger shut up
@@ -89,6 +94,8 @@ func apply_jump_and_gravity(delta) -> void:
 		jumps_remaining -= 1
 		is_jumping = true
 		velocity.y = jump_velocity
+		
+		#$hooded_character/AnimationTree.set("parameters/JumpShot/active", true)
 	
 	
 func apply_player_lateral_movement(delta) -> void:
@@ -140,9 +147,9 @@ func apply_player_lateral_movement(delta) -> void:
 			ground_dir_cache = direction
 		
 		# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
-		if $PlayerMeshCapsule.rotation.y != $SpringArm3D.rotation.y:
+		if $hooded_character.rotation.y != $SpringArm3D.rotation.y:
 			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
-			$PlayerMeshCapsule.rotation.y = lerp_angle($PlayerMeshCapsule.rotation.y, atan2(-velocity.x, -velocity.z), player_rotation_rate * delta)
+			$hooded_character.rotation.y = lerp_angle($hooded_character.rotation.y, atan2(-velocity.x, -velocity.z), player_rotation_rate * delta)
 		
 	# if there's no input, decelerate or do nothing.
 	else:
@@ -183,10 +190,10 @@ func stop_player_movement(delta) -> void:
 		# deceleration
 		player_speed_current = 0
 		
-		velocity.x = move_toward(velocity.x, 0, player_decel_rate * delta)
-		velocity.z = move_toward(velocity.z, 0, player_decel_rate * delta)
-		#velocity = velocity.move_toward(Vector3.ZERO, player_decel_rate * delta)
-	
+		#velocity.x = move_toward(velocity.x, 0, player_decel_rate * delta)
+		#velocity.z = move_toward(velocity.z, 0, player_decel_rate * delta)
+		velocity = velocity.move_toward(Vector3.ZERO, player_decel_rate * delta)
+
 	
 func rotate_cam_kb_m(event) -> void:
 	# mouse spring arm rotation

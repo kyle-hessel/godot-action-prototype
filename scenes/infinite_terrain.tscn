@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://dxh5nbadp46s7"]
-
-[ext_resource type="Script" path="res://scripts/infinite_terrain.gd" id="1_jukc2"]
-
-[node name="InfiniteTerrain" type="Node3D"]
-script = ExtResource("1_jukc2")
