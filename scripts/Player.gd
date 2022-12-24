@@ -36,6 +36,9 @@ func _ready():
 	# capture mouse movement for camera navigation
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
+	# hack fix that prevents the player from facing in the wrong direction if camera isn't moved before very first input. 
+	# might be a godot bug? check later in stable version. it's a harmless fix regardless, albeit odd that it works.
+	$SpringArm3D.rotation.y += 0.001
 
 # fluctuating framerate-based delta time
 func _process(delta: float) -> void:
@@ -54,7 +57,7 @@ func _physics_process(delta: float) -> void:
 	
 	#print(velocity.length())
 	
-	# Camera
+	# Camera (should see if we can only call this if using a controller input this frame)
 	rotate_cam_joypad()
 	
 	# Set the player's animation tree blending value equal to the player's current speed.
@@ -67,7 +70,8 @@ func _physics_process(delta: float) -> void:
 	
 	
 func _input(event):
-	# Camera
+	# Camera (should see if we can only call this if using a keyboard input this frame)
+	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
 	
@@ -151,7 +155,7 @@ func apply_player_lateral_movement(delta) -> void:
 			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
 			$hooded_character.rotation.y = lerp_angle($hooded_character.rotation.y, atan2(-velocity.x, -velocity.z), player_rotation_rate * delta)
 		
-	# if there's no input, decelerate or do nothing.
+	# if there's no input, determine how/if we decelerate.
 	else:
 		#if (is_jumping == false):
 		stop_player_movement(delta)
@@ -162,7 +166,6 @@ func apply_player_lateral_movement(delta) -> void:
 	
 
 func calculate_player_speed(delta) -> void:
-	
 	# determine movement state (sprinting or walking)
 	if (Input.is_action_pressed("sprint")):
 		movement_state = PlayerMovementState.SPRINT
@@ -192,7 +195,6 @@ func calculate_player_speed(delta) -> void:
 	
 	
 func stop_player_movement(delta) -> void:
-	
 		# update movement state
 		movement_state = PlayerMovementState.IDLE
 		
