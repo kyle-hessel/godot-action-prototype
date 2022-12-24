@@ -2,6 +2,7 @@ extends CharacterBody3D
 
 
 var player_speed_current: float = 0.0
+var player_speed_cached: float = 0.0
 @export var player_speed_walk_max: float = 6.0
 @export var player_speed_sprint_max: float = player_speed_walk_max * 2.0
 @export var player_walk_accel_rate: float = 4
@@ -30,6 +31,7 @@ enum PlayerMovementState {
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
+var blending_movement_state: bool = false;
 
 
 func _ready():
@@ -55,8 +57,8 @@ func _physics_process(delta: float) -> void:
 	# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
 	apply_player_lateral_movement(delta)
 	
-	print(player_speed_current)
-	print(velocity.length())
+	#print(player_speed_current)
+	#print(velocity.length())
 	
 	# Camera (should see if we can only call this if using a controller input this frame)
 	rotate_cam_joypad()
@@ -100,6 +102,7 @@ func apply_jump_and_gravity(delta: float) -> void:
 		jumps_remaining -= 1
 		is_jumping = true
 		velocity.y = jump_velocity
+		player_speed_cached = player_speed_current # cache player speed when leaving ground for air drag relative to momentum when jump began
 		
 		#$hooded_character/AnimationTree.set("parameters/JumpShot/active", true)
 	
@@ -127,31 +130,29 @@ func apply_player_lateral_movement(delta: float) -> void:
 	
 	# if we have input, do something.
 	if direction:
-		calculate_player_speed(delta)
+		calculate_player_movement_state(delta)
 		
 		# check if the player is moving laterally. used for air-drag in midair, probably redundant when used in conjunction with cached ground direction.
 		var inputting_movement: bool = Input.is_action_pressed("forward") || Input.is_action_pressed("backward") || Input.is_action_pressed("left") || Input.is_action_pressed("right")
 		
-		# calculate air drag
-		# mild air drag that doesn't worsen is applied if the player rotates the view while jumping.
-		# switching input directions will worsen air drag each time it occurs, to a point.
-		air_drag_percentage = air_drag_percentage_max - (midair_direction_changes * 0.1)
-		air_drag_percentage = clamp(air_drag_percentage, 0.3, air_drag_percentage_max)
-		
-		# apply movement, apply air drag if there is any
-		if (is_jumping && inputting_movement && direction != ground_dir_cache):
-			velocity.x = direction.x * player_speed_current * air_drag_percentage
-			velocity.z = direction.z * player_speed_current * air_drag_percentage
+		# air drag based on amount of directional changes while in midair
+		if (is_jumping):
+			# the more times the player changes direction while in midair, the more they slow down and lose air control.
+			match midair_direction_changes:
+				0:	
+					pass # keep existing player speed if no midair directional changes occur
+				1:
+					player_speed_current = lerp(player_speed_current, player_speed_cached - 2, 0.2)
+				2:
+					player_speed_current = lerp(player_speed_current, player_speed_cached - 3, 0.2)
+				3:
+					player_speed_current = lerp(player_speed_current, player_speed_cached - 4, 0.2)
+				_: # anything other than what is above
+					player_speed_current = lerp(player_speed_current, player_speed_cached - 5, 0.2)
 			
-			if (ground_dir_cache != Vector3(1, 1, 1)):
-				ground_dir_cache = Vector3(1, 1, 1) # in case player switches back to same direction again while in midair
-		else:
-			velocity.x = direction.x * player_speed_current
-			velocity.z = direction.z * player_speed_current
-			#velocity = direction * player_speed_current
-			
-			# cache direction every time the player moves on the ground, for air drag application when jumping
-			ground_dir_cache = direction
+		# apply lateral velocity.
+		velocity.x = direction.x * player_speed_current
+		velocity.z = direction.z * player_speed_current
 		
 		# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
 		if $hooded_character.rotation.y != $SpringArm3D.rotation.y:
@@ -168,37 +169,48 @@ func apply_player_lateral_movement(delta: float) -> void:
 	#print(movement_state)
 	
 
-func calculate_player_speed(delta: float) -> void:
+func calculate_player_movement_state(delta: float) -> void:
 	# determine movement state (sprinting or walking)
 	if (Input.is_action_pressed("sprint")):
 		movement_state = PlayerMovementState.SPRINT
+	
+	# deceleration from sprint -> walk
+	elif (Input.is_action_just_released("sprint")):
+		blending_movement_state = true;
 	else:
-		# deceleration, based on movement
-		if player_speed_current > player_speed_walk_max:
-			player_speed_current -= (player_decel_rate * delta)
-		elif player_speed_current < player_speed_walk_max:
-			player_speed_current = player_speed_walk_max
-			movement_state = PlayerMovementState.WALK
+		if blending_movement_state:
+			if player_speed_current > player_speed_walk_max:
+				player_speed_current -= (player_decel_rate * delta)
+			elif player_speed_current < player_speed_walk_max:
+				player_speed_current = player_speed_walk_max
+				blending_movement_state = false;
+			else:
+				blending_movement_state = false;
+				
+		# always set movement state to walk if moving and not sprinting, or once deceleration from sprint -> walk is complete
 		else:
 			movement_state = PlayerMovementState.WALK
-		
+	
+	
 	# calculate acceleration
 	smooth_accelerate(delta)
 
 
 # acceleration, based on movement state
 func smooth_accelerate(delta: float) -> void:
-	if (movement_state == PlayerMovementState.WALK):
-		if player_speed_current < player_speed_walk_max:
-			player_speed_current += (player_walk_accel_rate * delta)
-		elif player_speed_current > player_speed_walk_max:
-			player_speed_current = player_speed_walk_max
-				
-	elif (movement_state == PlayerMovementState.SPRINT):
-		if player_speed_current < player_speed_sprint_max:
-			player_speed_current += (player_sprint_accel_rate * delta)
-		elif player_speed_current > player_speed_sprint_max:
-			player_speed_current = player_speed_sprint_max
+	# only calculate if on ground
+	if (is_jumping == false):
+		if (movement_state == PlayerMovementState.WALK):
+			if player_speed_current < player_speed_walk_max:
+				player_speed_current += (player_walk_accel_rate * delta)
+			elif player_speed_current > player_speed_walk_max:
+				player_speed_current = player_speed_walk_max
+					
+		elif (movement_state == PlayerMovementState.SPRINT):
+			if player_speed_current < player_speed_sprint_max:
+				player_speed_current += (player_sprint_accel_rate * delta)
+			elif player_speed_current > player_speed_sprint_max:
+				player_speed_current = player_speed_sprint_max
 
 
 func stop_player_movement(delta: float) -> void:
