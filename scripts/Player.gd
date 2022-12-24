@@ -55,7 +55,8 @@ func _physics_process(delta: float) -> void:
 	# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
 	apply_player_lateral_movement(delta)
 	
-	#print(velocity.length())
+	print(player_speed_current)
+	print(velocity.length())
 	
 	# Camera (should see if we can only call this if using a controller input this frame)
 	rotate_cam_joypad()
@@ -75,7 +76,7 @@ func _input(event):
 	rotate_cam_kb_m(event)
 	
 	
-func apply_jump_and_gravity(delta) -> void:
+func apply_jump_and_gravity(delta: float) -> void:
 	
 	# Apply gravity, reset jumps
 	if not is_on_floor():
@@ -86,6 +87,7 @@ func apply_jump_and_gravity(delta) -> void:
 		if (inputting_movement):
 			midair_direction_changes += 1
 		
+	# hitting the ground
 	else:
 		if is_jumping:
 			is_jumping = false
@@ -102,7 +104,7 @@ func apply_jump_and_gravity(delta) -> void:
 		#$hooded_character/AnimationTree.set("parameters/JumpShot/active", true)
 	
 	
-func apply_player_lateral_movement(delta) -> void:
+func apply_player_lateral_movement(delta: float) -> void:
 	
 	# Get the input direction.
 	var input_dir := Input.get_vector("left", "right", "forward", "backward")
@@ -146,6 +148,7 @@ func apply_player_lateral_movement(delta) -> void:
 		else:
 			velocity.x = direction.x * player_speed_current
 			velocity.z = direction.z * player_speed_current
+			#velocity = direction * player_speed_current
 			
 			# cache direction every time the player moves on the ground, for air drag application when jumping
 			ground_dir_cache = direction
@@ -165,7 +168,7 @@ func apply_player_lateral_movement(delta) -> void:
 	#print(movement_state)
 	
 
-func calculate_player_speed(delta) -> void:
+func calculate_player_speed(delta: float) -> void:
 	# determine movement state (sprinting or walking)
 	if (Input.is_action_pressed("sprint")):
 		movement_state = PlayerMovementState.SPRINT
@@ -179,8 +182,12 @@ func calculate_player_speed(delta) -> void:
 		else:
 			movement_state = PlayerMovementState.WALK
 		
-		
-	# acceleration, based on movement state
+	# calculate acceleration
+	smooth_accelerate(delta)
+
+
+# acceleration, based on movement state
+func smooth_accelerate(delta: float) -> void:
 	if (movement_state == PlayerMovementState.WALK):
 		if player_speed_current < player_speed_walk_max:
 			player_speed_current += (player_walk_accel_rate * delta)
@@ -192,9 +199,9 @@ func calculate_player_speed(delta) -> void:
 			player_speed_current += (player_sprint_accel_rate * delta)
 		elif player_speed_current > player_speed_sprint_max:
 			player_speed_current = player_speed_sprint_max
-	
-	
-func stop_player_movement(delta) -> void:
+
+
+func stop_player_movement(delta: float) -> void:
 		# update movement state
 		movement_state = PlayerMovementState.IDLE
 		
