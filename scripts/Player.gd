@@ -8,7 +8,7 @@ var player_speed_current: float = 0.0
 @export var player_sprint_accel_rate: float = 7
 @export var player_decel_rate: float = 14
 @export var player_rotation_rate: float = 9.0
-@export var jump_velocity: float = 7
+@export var jump_velocity: float = 7.0
 @export var air_drag_percentage_max: float = 0.75
 var air_drag_percentage: float = air_drag_percentage_max
 @export var max_jumps: int = 2
@@ -153,6 +153,7 @@ func apply_player_lateral_movement(delta) -> void:
 		
 	# if there's no input, decelerate or do nothing.
 	else:
+		#if (is_jumping == false):
 		stop_player_movement(delta)
 	# debug
 	#print(player_speed_current)
@@ -166,7 +167,15 @@ func calculate_player_speed(delta) -> void:
 	if (Input.is_action_pressed("sprint")):
 		movement_state = PlayerMovementState.SPRINT
 	else:
-		movement_state = PlayerMovementState.WALK
+		# deceleration, based on movement
+		if player_speed_current > player_speed_walk_max:
+			player_speed_current -= (player_decel_rate * delta)
+		elif player_speed_current < player_speed_walk_max:
+			player_speed_current = player_speed_walk_max
+			movement_state = PlayerMovementState.WALK
+		else:
+			movement_state = PlayerMovementState.WALK
+		
 		
 	# acceleration, based on movement state
 	if (movement_state == PlayerMovementState.WALK):
@@ -190,9 +199,11 @@ func stop_player_movement(delta) -> void:
 		# deceleration
 		player_speed_current = 0
 		
-		#velocity.x = move_toward(velocity.x, 0, player_decel_rate * delta)
-		#velocity.z = move_toward(velocity.z, 0, player_decel_rate * delta)
-		velocity = velocity.move_toward(Vector3.ZERO, player_decel_rate * delta)
+		if is_jumping:
+			velocity.x = move_toward(velocity.x, 0, player_decel_rate * delta)
+			velocity.z = move_toward(velocity.z, 0, player_decel_rate * delta)
+		else:
+			velocity = velocity.move_toward(Vector3.ZERO, player_decel_rate * delta)
 
 	
 func rotate_cam_kb_m(event) -> void:
