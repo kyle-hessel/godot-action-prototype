@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3 uid="uid://dnagf8yaneit5"]
+
+[ext_resource type="PackedScene" uid="uid://cjiu4awpne5sc" path="res://3D_models/weapons/DamagedSword.glb" id="1_un8bo"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_20bp3"]
+size = Vector3(0.216467, 0.847767, 0.0487429)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_rk48s"]
+radius = 1.84599
+
+[node name="DamagedSword" instance=ExtResource("1_un8bo")]
+
+[node name="HitboxArea" type="Area3D" parent="Sword2_Weathered" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55047, 0)
+
+[node name="HitboxCollision" type="CollisionShape3D" parent="Sword2_Weathered/HitboxArea" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.045859, 0)
+shape = SubResource("BoxShape3D_20bp3")
+
+[node name="PickupArea" type="Area3D" parent="Sword2_Weathered" index="1"]
+
+[node name="PickupSphere" type="CollisionShape3D" parent="Sword2_Weathered/PickupArea" index="0"]
+shape = SubResource("SphereShape3D_rk48s")

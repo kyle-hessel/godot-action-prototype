@@ -99,10 +99,17 @@ func apply_jump_and_gravity(delta: float) -> void:
 
 	# Jumping
 	if Input.is_action_just_pressed("jump") && jumps_remaining > 0:
-		jumps_remaining -= 1
-		is_jumping = true
-		velocity.y = jump_velocity
-		player_speed_cached = player_speed_current # cache player speed when leaving ground for air drag relative to momentum when jump began
+		if is_on_floor():
+			jumps_remaining -= 1
+			is_jumping = true
+			velocity.y = jump_velocity
+			player_speed_cached = player_speed_current # cache player speed when leaving ground for air drag relative to momentum when jump began
+		# stop player from beginning jumping sequence while falling
+		else:
+			if jumps_remaining < max_jumps:
+				jumps_remaining -= 1
+				velocity.y = jump_velocity
+				player_speed_cached = player_speed_current
 		
 		#$hooded_character/AnimationTree.set("parameters/JumpShot/active", true)
 	
