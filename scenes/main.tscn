@@ -1,8 +1,9 @@
-[gd_scene load_steps=12 format=3 uid="uid://q86ei1y5fcws"]
+[gd_scene load_steps=13 format=3 uid="uid://q86ei1y5fcws"]
 
 [ext_resource type="PackedScene" uid="uid://fucdrtw3uvta" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/water.tres" id="2_20y4g"]
+[ext_resource type="PackedScene" uid="uid://dnagf8yaneit5" path="res://scenes/damaged_sword.tscn" id="6_0eqoa"]
 [ext_resource type="Shader" uid="uid://b0wqkkoahs7nd" path="res://shaders/pixel_shader.tres" id="8_fgqny"]
 [ext_resource type="Texture2D" uid="uid://de3bb1rr2vxir" path="res://icon.svg" id="9_fu568"]
 
@@ -68,3 +69,6 @@ material = SubResource("ShaderMaterial_r4agb")
 scale = Vector2(15, 8.4375)
 texture = ExtResource("9_fu568")
 centered = false
+
+[node name="DamagedSword" parent="." instance=ExtResource("6_0eqoa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 47.8066, 17.0632, 0.756506)

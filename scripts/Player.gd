@@ -16,6 +16,7 @@ var air_drag_percentage: float = air_drag_percentage_max
 var jumps_remaining: int = max_jumps
 var midair_direction_changes: int = 0
 var is_jumping: bool = false
+var weapon_drawn: bool = false
 var ground_dir_cache: Vector3
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
@@ -80,6 +81,7 @@ func _input(event):
 	# using 'event' instead of 'Input' since this doesn't need to be checked every frame.
 	if (event.is_action_pressed("toggle_weapon")):
 		$hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment.visible = !$hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment.visible
+		weapon_drawn = !weapon_drawn
 	
 	
 func apply_jump_and_gravity(delta: float) -> void:
@@ -261,8 +263,8 @@ func rotate_cam_joypad() -> void:
 	$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3)
 
 
-func _on_overlap_area_body_shape_entered(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int) -> void:
-	print(body)
-	var body_shape_owner = body.shape_find_owner(body_shape_index)
-	var body_shape_node = body.shape_owner_get_owner(body_shape_owner)
-	print(body_shape_node)
+func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
+	print(area)
+	var area_shape_owner = area.shape_find_owner(area_shape_index)
+	var area_shape_node = area.shape_owner_get_owner(area_shape_owner)
+	print(area_shape_node)
