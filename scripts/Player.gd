@@ -16,18 +16,21 @@ var air_drag_percentage: float = air_drag_percentage_max
 var jumps_remaining: int = max_jumps
 var midair_direction_changes: int = 0
 var is_jumping: bool = false
-var current_weapon: Node3D = null
-var overlapping_object: Node3D = null
-var weapon_drawn: bool = false
 var ground_dir_cache: Vector3
-
-@onready var weapon_slot := $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/WeaponSlot
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
+@onready var weapon_slot: Node3D = $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/WeaponSlot
+@onready var vanish_timer: Timer = $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/VanishTimer
+
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 0.05
+
+var current_weapon: Node3D = null
+var overlapping_object: Node3D = null
+var weapon_drawn: bool = false
+@export var vanish_timer_duration: float = 10.0
 
 enum PlayerMovementState {
 	IDLE = 0,
@@ -76,9 +79,8 @@ func _physics_process(delta: float) -> void:
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
 	
-	# held weapon tracking
-	if current_weapon != null:
-		current_weapon.global_transform = weapon_slot.global_transform
+	# held weapon tracking, attacking
+	handle_weapon_updates()
 	
 	
 func _input(event):
@@ -87,7 +89,7 @@ func _input(event):
 	rotate_cam_kb_m(event)
 	
 	# using 'event.' instead of 'Input.' for better input event buffering.
-	handle_weapons(event)
+	handle_weapon_actions(event)
 	
 	
 func apply_jump_and_gravity(delta: float) -> void:
@@ -269,14 +271,23 @@ func rotate_cam_joypad() -> void:
 	$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3)
 	
 
-func handle_weapons(event) -> void:
+func handle_weapon_actions(event) -> void:
 	if (event.is_action_pressed("equip_weapon") && overlapping_object != null && current_weapon == null):
 		weapon_drawn = true
 		current_weapon = overlapping_object
-	
-	if (event.is_action_pressed("toggle_weapon") && current_weapon != null):
-		current_weapon.visible = !current_weapon.visible
+		vanish_timer.start(vanish_timer_duration)
+		
+	if (event.is_action_pressed("attack") && current_weapon != null && weapon_drawn == false):
 		weapon_drawn = !weapon_drawn
+		current_weapon.visible = weapon_drawn
+		vanish_timer.start(vanish_timer_duration)
+	elif (event.is_action_pressed("attack") && current_weapon != null && weapon_drawn == true):
+		vanish_timer.start(vanish_timer_duration)
+	
+		
+func handle_weapon_updates() -> void:
+	if current_weapon != null:
+		current_weapon.global_transform = weapon_slot.global_transform
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
@@ -287,3 +298,9 @@ func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape
 	
 func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
 	overlapping_object = null
+
+
+func _on_vanish_timer_timeout() -> void:
+	print("vanish")
+	weapon_drawn = !weapon_drawn
+	current_weapon.visible = weapon_drawn
