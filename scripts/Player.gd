@@ -77,6 +77,10 @@ func _input(event):
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
+	# using 'event' instead of 'Input' since this doesn't need to be checked every frame.
+	if (event.is_action_pressed("toggle_weapon")):
+		$hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment.visible = !$hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment.visible
+	
 	
 func apply_jump_and_gravity(delta: float) -> void:
 	
@@ -257,3 +261,8 @@ func rotate_cam_joypad() -> void:
 	$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3)
 
 
+func _on_overlap_area_body_shape_entered(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int) -> void:
+	print(body)
+	var body_shape_owner = body.shape_find_owner(body_shape_index)
+	var body_shape_node = body.shape_owner_get_owner(body_shape_owner)
+	print(body_shape_node)
