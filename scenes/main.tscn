@@ -71,4 +71,4 @@ texture = ExtResource("9_fu568")
 centered = false
 
 [node name="DamagedSword" parent="." instance=ExtResource("6_0eqoa")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 47.8066, 17.0632, 0.756506)
+transform = Transform3D(-0.127151, 0, -0.991883, 0.359964, -0.931824, -0.0461444, -0.924261, -0.36291, 0.118483, 47.8066, 17.8438, 0.756506)

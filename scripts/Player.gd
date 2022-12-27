@@ -16,8 +16,12 @@ var air_drag_percentage: float = air_drag_percentage_max
 var jumps_remaining: int = max_jumps
 var midair_direction_changes: int = 0
 var is_jumping: bool = false
+var current_weapon: Node3D = null
+var overlapping_object: Node3D = null
 var weapon_drawn: bool = false
 var ground_dir_cache: Vector3
+
+@onready var weapon_slot := $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/WeaponSlot
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -72,16 +76,18 @@ func _physics_process(delta: float) -> void:
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
 	
+	# held weapon tracking
+	if current_weapon != null:
+		current_weapon.global_transform = weapon_slot.global_transform
+	
 	
 func _input(event):
 	# Camera (should see if we can only call this if using a keyboard input this frame)
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
-	# using 'event' instead of 'Input' since this doesn't need to be checked every frame.
-	if (event.is_action_pressed("toggle_weapon")):
-		$hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment.visible = !$hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment.visible
-		weapon_drawn = !weapon_drawn
+	# using 'event.' instead of 'Input.' for better input event buffering.
+	handle_weapons(event)
 	
 	
 func apply_jump_and_gravity(delta: float) -> void:
@@ -261,10 +267,23 @@ func rotate_cam_joypad() -> void:
 	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_up_joystick") * -joystick_sensitivity
 	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_down_joystick") * joystick_sensitivity
 	$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3)
+	
+
+func handle_weapons(event) -> void:
+	if (event.is_action_pressed("equip_weapon") && overlapping_object != null && current_weapon == null):
+		weapon_drawn = true
+		current_weapon = overlapping_object
+	
+	if (event.is_action_pressed("toggle_weapon") && current_weapon != null):
+		current_weapon.visible = !current_weapon.visible
+		weapon_drawn = !weapon_drawn
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
-	print(area)
-	var area_shape_owner = area.shape_find_owner(area_shape_index)
-	var area_shape_node = area.shape_owner_get_owner(area_shape_owner)
-	print(area_shape_node)
+	print(area.get_parent_node_3d())
+	
+	overlapping_object = area.get_parent_node_3d()
+		
+	
+func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
+	overlapping_object = null
