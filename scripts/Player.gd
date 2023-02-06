@@ -75,12 +75,14 @@ func _physics_process(delta: float) -> void:
 	$hooded_character/AnimationTree.set("parameters/IdleWalkRun/blend_position", velocity.length())
 
 	# Collisions
-	@warning_ignore(return_value_discarded) # makes debugger shut up
+	#@warning_ignore(return_value_discarded) # makes debugger shut up
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
 	
 	# held weapon tracking, attacking
 	handle_weapon_updates()
+	
+	#print(movement_state)
 	
 	
 func _input(event):
@@ -151,10 +153,11 @@ func apply_player_lateral_movement(delta: float) -> void:
 	
 	# if we have input, do something.
 	if direction:
-		calculate_player_movement_state(delta)
-		
 		# check if the player is moving laterally. used for air-drag in midair, probably redundant when used in conjunction with cached ground direction.
 		var inputting_movement: bool = Input.is_action_pressed("forward") || Input.is_action_pressed("backward") || Input.is_action_pressed("left") || Input.is_action_pressed("right")
+		
+		if inputting_movement:
+			calculate_player_movement_state(delta)
 		
 		# air drag based on amount of directional changes while in midair
 		if (is_jumping):
@@ -170,7 +173,7 @@ func apply_player_lateral_movement(delta: float) -> void:
 					player_speed_current = lerp(player_speed_current, player_speed_cached - 4, 0.2)
 				_: # anything other than what is above
 					player_speed_current = lerp(player_speed_current, player_speed_cached - 5, 0.2)
-			
+		
 		# apply lateral velocity.
 		velocity.x = direction.x * player_speed_current
 		velocity.z = direction.z * player_speed_current
@@ -184,11 +187,7 @@ func apply_player_lateral_movement(delta: float) -> void:
 	else:
 		#if (is_jumping == false):
 		stop_player_movement(delta)
-	# debug
-	#print(player_speed_current)
-	# debug
-	#print(movement_state)
-	
+
 
 func calculate_player_movement_state(delta: float) -> void:
 	# determine movement state (sprinting or walking)
@@ -211,6 +210,8 @@ func calculate_player_movement_state(delta: float) -> void:
 		# always set movement state to walk if moving and not sprinting, or once deceleration from sprint -> walk is complete
 		else:
 			movement_state = PlayerMovementState.WALK
+			
+		#print(blending_movement_state)
 	
 	
 	# calculate acceleration
@@ -220,7 +221,7 @@ func calculate_player_movement_state(delta: float) -> void:
 # acceleration, based on movement state
 func smooth_accelerate(delta: float) -> void:
 	# only calculate if on ground
-	if (is_jumping == false):
+	if is_jumping == false:
 		if (movement_state == PlayerMovementState.WALK):
 			if player_speed_current < player_speed_walk_max:
 				player_speed_current += (player_walk_accel_rate * delta)
@@ -237,6 +238,7 @@ func smooth_accelerate(delta: float) -> void:
 func stop_player_movement(delta: float) -> void:
 		# update movement state
 		movement_state = PlayerMovementState.IDLE
+		blending_movement_state = false;
 		
 		# deceleration
 		player_speed_current = 0

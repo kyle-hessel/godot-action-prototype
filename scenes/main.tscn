@@ -20,7 +20,7 @@ sdfgi_use_occlusion = true
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_yots1"]
 render_priority = 0
 shader = ExtResource("2_20y4g")
-shader_parameter/ColorParameter = null
+shader_parameter/ColorParameter = Color(4e-05, 0.437882, 0.846476, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_6urk2"]
 material = SubResource("ShaderMaterial_yots1")
