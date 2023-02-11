@@ -1,9 +1,10 @@
-[gd_scene load_steps=13 format=3 uid="uid://q86ei1y5fcws"]
+[gd_scene load_steps=16 format=3 uid="uid://q86ei1y5fcws"]
 
 [ext_resource type="PackedScene" uid="uid://fucdrtw3uvta" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/water.tres" id="2_20y4g"]
 [ext_resource type="PackedScene" uid="uid://dnagf8yaneit5" path="res://scenes/damaged_sword.tscn" id="6_0eqoa"]
+[ext_resource type="Material" uid="uid://b47ubq03xxlkt" path="res://shaders/realistic_water.tres" id="7_ktmp4"]
 [ext_resource type="Shader" uid="uid://b0wqkkoahs7nd" path="res://shaders/pixel_shader.tres" id="8_fgqny"]
 [ext_resource type="Texture2D" uid="uid://de3bb1rr2vxir" path="res://icon.svg" id="9_fu568"]
 
@@ -31,6 +32,13 @@ subdivide_depth = 20
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_r4agb"]
 shader = ExtResource("8_fgqny")
 shader_parameter/Pixelization = 512.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_324bv"]
+size = Vector2(40, 40)
+subdivide_width = 200
+subdivide_depth = 200
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_iurt0"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_ikywk")
@@ -72,3 +80,19 @@ centered = false
 
 [node name="DamagedSword" parent="." instance=ExtResource("6_0eqoa")]
 transform = Transform3D(-0.127151, 0, -0.991883, 0.359964, -0.931824, -0.0461444, -0.924261, -0.36291, 0.118483, 47.8066, 17.8438, 0.756506)
+
+[node name="Water2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.806, 0, 0, 0, 0.11, 0, 0, 0, 1, 0.519861, 13.6444, -42.3058)
+cast_shadow = 0
+mesh = SubResource("PlaneMesh_324bv")
+surface_material_override/0 = ExtResource("7_ktmp4")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.57126, 13.5198, -24.4885)
+mesh = SubResource("CylinderMesh_iurt0")
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00468922, 13.3909, -26.5866)
+use_collision = true
+radius = 1.1352
+sides = 32
