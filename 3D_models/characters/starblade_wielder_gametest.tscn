@@ -1,0 +1,18 @@
+[gd_scene load_steps=5 format=3 uid="uid://bhhc6vwfe1s0o"]
+
+[ext_resource type="PackedScene" uid="uid://bm3nnhyx1gu88" path="res://3D_models/characters/starblade_wielder_gametest.glb" id="1_475md"]
+[ext_resource type="Material" uid="uid://pg5s314bqun7" path="res://3D_models/characters/hair_mat_test.tres" id="2_22hdc"]
+[ext_resource type="Material" uid="uid://bjksgg8eglfgr" path="res://3D_models/characters/body_mat_test.tres" id="2_rjylq"]
+[ext_resource type="Material" uid="uid://dwsg7rc2r8eay" path="res://3D_models/characters/clothes_mat_test.tres" id="3_8qu2h"]
+
+[node name="starblade_wielder_gametest" instance=ExtResource("1_475md")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00827074, 0.004897, -0.00595689)
+
+[node name="body_retopo" parent="." index="1"]
+surface_material_override/0 = ExtResource("2_rjylq")
+
+[node name="clothes_retopo" parent="." index="2"]
+surface_material_override/0 = ExtResource("3_8qu2h")
+
+[node name="hair_retopo" parent="." index="5"]
+surface_material_override/0 = ExtResource("2_22hdc")

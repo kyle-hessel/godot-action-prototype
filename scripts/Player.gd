@@ -10,6 +10,7 @@ var player_speed_cached: float = 0.0
 @export var player_decel_rate: float = 14
 @export var player_rotation_rate: float = 9.0
 @export var jump_velocity: float = 7.0
+@export var jump_velocity_multiplier: float = 1.25
 @export var air_drag_percentage_max: float = 0.75
 var air_drag_percentage: float = air_drag_percentage_max
 @export var max_jumps: int = 2
@@ -20,6 +21,7 @@ var ground_dir_cache: Vector3
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+@export var gravity_multiplier: float = 1.0
 
 @onready var weapon_slot: Node3D = $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/WeaponSlot
 @onready var vanish_timer: Timer = $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/VanishTimer
@@ -98,7 +100,7 @@ func apply_jump_and_gravity(delta: float) -> void:
 	
 	# Apply gravity, reset jumps
 	if not is_on_floor():
-		velocity.y -= gravity * delta
+		velocity.y -= gravity * gravity_multiplier * delta
 		
 		# check for directional switches in midair
 		var inputting_movement: bool = Input.is_action_just_released("forward") || Input.is_action_just_released("backward") || Input.is_action_just_released("left") || Input.is_action_just_released("right")
@@ -118,13 +120,13 @@ func apply_jump_and_gravity(delta: float) -> void:
 		if is_on_floor():
 			jumps_remaining -= 1
 			is_jumping = true
-			velocity.y = jump_velocity
+			velocity.y = jump_velocity * jump_velocity_multiplier
 			player_speed_cached = player_speed_current # cache player speed when leaving ground for air drag relative to momentum when jump began
 		# stop player from beginning jumping sequence while falling
 		else:
 			if jumps_remaining < max_jumps:
 				jumps_remaining -= 1
-				velocity.y = jump_velocity
+				velocity.y = jump_velocity * jump_velocity_multiplier
 				player_speed_cached = player_speed_current
 		
 		#$hooded_character/AnimationTree.set("parameters/JumpShot/active", true)
@@ -173,10 +175,17 @@ func apply_player_lateral_movement(delta: float) -> void:
 					player_speed_current = lerp(player_speed_current, player_speed_cached - 4, 0.2)
 				_: # anything other than what is above
 					player_speed_current = lerp(player_speed_current, player_speed_cached - 5, 0.2)
-		
-		# apply lateral velocity.
-		velocity.x = direction.x * player_speed_current
-		velocity.z = direction.z * player_speed_current
+					
+			# apply lateral velocity.
+			if movement_state == PlayerMovementState.SPRINT:
+				velocity.x = direction.x * player_speed_current * 0.75
+				velocity.z = direction.z * player_speed_current * 0.75
+			else:
+				velocity.x = direction.x * player_speed_current * 1.25
+				velocity.z = direction.z * player_speed_current * 1.25
+		else:
+			velocity.x = direction.x * player_speed_current
+			velocity.z = direction.z * player_speed_current
 		
 		# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
 		if $hooded_character.rotation.y != $SpringArm3D.rotation.y:

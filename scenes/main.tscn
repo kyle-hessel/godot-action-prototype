@@ -1,10 +1,11 @@
-[gd_scene load_steps=16 format=3 uid="uid://q86ei1y5fcws"]
+[gd_scene load_steps=17 format=3 uid="uid://q86ei1y5fcws"]
 
 [ext_resource type="PackedScene" uid="uid://fucdrtw3uvta" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/water.tres" id="2_20y4g"]
 [ext_resource type="PackedScene" uid="uid://dnagf8yaneit5" path="res://scenes/damaged_sword.tscn" id="6_0eqoa"]
 [ext_resource type="Material" uid="uid://b47ubq03xxlkt" path="res://shaders/realistic_water.tres" id="7_ktmp4"]
+[ext_resource type="PackedScene" uid="uid://bhhc6vwfe1s0o" path="res://3D_models/characters/starblade_wielder_gametest.tscn" id="8_2uukl"]
 [ext_resource type="Shader" uid="uid://b0wqkkoahs7nd" path="res://shaders/pixel_shader.tres" id="8_fgqny"]
 [ext_resource type="Texture2D" uid="uid://de3bb1rr2vxir" path="res://icon.svg" id="9_fu568"]
 
@@ -16,7 +17,13 @@ sky_material = SubResource("PhysicalSkyMaterial_8bey6")
 [sub_resource type="Environment" id="Environment_ph5ts"]
 background_mode = 2
 sky = SubResource("Sky_qvm31")
+tonemap_mode = 3
+tonemap_exposure = 0.47
+tonemap_white = 0.47
+ssao_enabled = true
+sdfgi_enabled = true
 sdfgi_use_occlusion = true
+sdfgi_energy = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_yots1"]
 render_priority = 0
@@ -56,6 +63,15 @@ environment = SubResource("Environment_ph5ts")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.505895, 0.834914, -0.216768, 0.538253, -0.109174, 0.835682, 0.674057, -0.539444, -0.504626, 0, 27.7275, 0)
+shadow_enabled = true
+shadow_opacity = 0.95
+directional_shadow_split_1 = 0.161
+directional_shadow_split_2 = 0.246
+directional_shadow_split_3 = 0.385
+directional_shadow_blend_splits = true
+directional_shadow_fade_start = 0.521
+directional_shadow_max_distance = 38.1
+directional_shadow_pancake_size = 6.9
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 17.1413, 5.2542)
@@ -96,3 +112,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00468922, 13.3909, -26.586
 use_collision = true
 radius = 1.1352
 sides = 32
+
+[node name="starblade_wielder_gametest" parent="." instance=ExtResource("8_2uukl")]
+transform = Transform3D(-1.25, 0, -1.88745e-07, 0, 1.25, 0, 1.88745e-07, 0, -1.25, 3.76324, 14.1786, -14.1556)

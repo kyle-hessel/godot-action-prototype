@@ -106,7 +106,7 @@ void vertex() {
 
 // UVFunc:3
 	vec2 n_in3p1 = vec2(0.05000, 0.05000);
-	vec2 n_out3p0 = fma(vec2(n_out2p0), n_in3p1, UV);
+	vec2 n_out3p0 = vec2(n_out2p0) * n_in3p1 + UV;
 
 
 // Texture2D:4
@@ -147,7 +147,7 @@ void fragment() {
 
 // UVFunc:6
 	vec2 n_in6p1 = vec2(0.10000, 0.10000);
-	vec2 n_out6p0 = fma(vec2(n_out7p0), n_in6p1, UV);
+	vec2 n_out6p0 = vec2(n_out7p0) * n_in6p1 + UV;
 
 
 // Texture2D:3
@@ -160,7 +160,7 @@ void fragment() {
 
 // UVFunc:10
 	vec2 n_in10p1 = vec2(-0.10000, -0.10000);
-	vec2 n_out10p0 = fma(vec2(n_out9p0), n_in10p1, UV);
+	vec2 n_out10p0 = vec2(n_out9p0) * n_in10p1 + UV;
 
 
 // Texture2D:8

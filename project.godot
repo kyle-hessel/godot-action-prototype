@@ -20,6 +20,13 @@ config/icon="res://icon.svg"
 window/size/viewport_width=1920
 window/size/viewport_height=1080
 
+[importer_defaults]
+
+texture={
+"compress/high_quality": true,
+"compress/mode": 2
+}
+
 [input]
 
 forward={
@@ -97,7 +104,7 @@ attack={
 
 [physics]
 
-3d/default_gravity=16.0
+3d/default_gravity=20.0
 
 [rendering]
 
