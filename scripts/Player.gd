@@ -45,6 +45,8 @@ var blending_movement_state: bool = false;
 
 
 func _ready():
+	Engine.max_fps = 144
+	
 	# capture mouse movement for camera navigation
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -55,7 +57,6 @@ func _ready():
 # fluctuating framerate-based delta time
 func _process(delta: float) -> void:
 	pass
-
 
 # difference from _process: https://godotengine.org/qa/57458/difference-between-_process-_physics_process-have-script
 #tl;dr stable delta time
