@@ -65,7 +65,7 @@ func _physics_process(delta: float) -> void:
 	apply_jump_and_gravity(delta)
 
 	# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
-	apply_player_lateral_movement(delta)
+	calculate_player_lateral_movement(delta)
 	
 	#print(player_speed_current)
 	#print(velocity.length())
@@ -132,7 +132,7 @@ func apply_jump_and_gravity(delta: float) -> void:
 		#$hooded_character/AnimationTree.set("parameters/JumpShot/active", true)
 	
 	
-func apply_player_lateral_movement(delta: float) -> void:
+func calculate_player_lateral_movement(delta: float) -> void:
 	
 	# Get the input direction.
 	var input_dir := Input.get_vector("left", "right", "forward", "backward")
@@ -166,7 +166,7 @@ func apply_player_lateral_movement(delta: float) -> void:
 			# the more times the player changes direction while in midair, the more they slow down and lose air control.
 			match midair_direction_changes:
 				0:	
-					pass # keep existing player speed if no midair directional changes occur
+					pass
 				1:
 					player_speed_current = lerp(player_speed_current, player_speed_cached - 2, 0.2)
 				2:
@@ -176,16 +176,19 @@ func apply_player_lateral_movement(delta: float) -> void:
 				_: # anything other than what is above
 					player_speed_current = lerp(player_speed_current, player_speed_cached - 5, 0.2)
 					
-			# apply lateral velocity.
-			if movement_state == PlayerMovementState.SPRINT:
-				velocity.x = direction.x * player_speed_current * 0.75
-				velocity.z = direction.z * player_speed_current * 0.75
+			if jumps_remaining > 0:
+				# apply lateral velocity.
+				if movement_state == PlayerMovementState.SPRINT:
+					apply_player_lateral_movement(direction, 0.75)
+				else:
+					apply_player_lateral_movement(direction, 1.25)
 			else:
-				velocity.x = direction.x * player_speed_current * 1.25
-				velocity.z = direction.z * player_speed_current * 1.25
+				if movement_state == PlayerMovementState.SPRINT:
+					apply_player_lateral_movement(direction, 0.6)
+				else:
+					apply_player_lateral_movement(direction, 1.1)
 		else:
-			velocity.x = direction.x * player_speed_current
-			velocity.z = direction.z * player_speed_current
+			apply_player_lateral_movement(direction, 1.0)
 		
 		# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
 		if $hooded_character.rotation.y != $SpringArm3D.rotation.y:
@@ -196,6 +199,11 @@ func apply_player_lateral_movement(delta: float) -> void:
 	else:
 		#if (is_jumping == false):
 		stop_player_movement(delta)
+
+
+func apply_player_lateral_movement(dir: Vector3, modifier: float) -> void:
+	velocity.x = dir.x * player_speed_current * modifier
+	velocity.z = dir.z * player_speed_current * modifier
 
 
 func calculate_player_movement_state(delta: float) -> void:
