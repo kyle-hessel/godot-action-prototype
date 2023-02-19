@@ -1,13 +1,15 @@
-[gd_scene load_steps=17 format=3 uid="uid://q86ei1y5fcws"]
+[gd_scene load_steps=17 format=3 uid="uid://chcm73f8ivski"]
 
-[ext_resource type="PackedScene" uid="uid://fucdrtw3uvta" path="res://scenes/player.tscn" id="1_dha7o"]
+[ext_resource type="PackedScene" uid="uid://bq1uivhkbxtb8" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/water.tres" id="2_20y4g"]
 [ext_resource type="PackedScene" uid="uid://dnagf8yaneit5" path="res://scenes/damaged_sword.tscn" id="6_0eqoa"]
 [ext_resource type="Material" uid="uid://b47ubq03xxlkt" path="res://shaders/realistic_water.tres" id="7_ktmp4"]
+[ext_resource type="Shader" path="res://shaders/canvas_pp_test.gdshader" id="7_v7tbl"]
 [ext_resource type="PackedScene" uid="uid://bhhc6vwfe1s0o" path="res://3D_models/characters/starblade_wielder_gametest.tscn" id="8_2uukl"]
-[ext_resource type="Shader" uid="uid://b0wqkkoahs7nd" path="res://shaders/pixel_shader.tres" id="8_fgqny"]
-[ext_resource type="Texture2D" uid="uid://de3bb1rr2vxir" path="res://icon.svg" id="9_fu568"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jyu5b"]
+albedo_color = Color(0.709804, 0.678431, 0.643137, 1)
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_8bey6"]
 
@@ -21,7 +23,6 @@ tonemap_mode = 3
 tonemap_exposure = 0.47
 tonemap_white = 0.47
 ssao_enabled = true
-sdfgi_enabled = true
 sdfgi_use_occlusion = true
 sdfgi_energy = 0.5
 
@@ -36,16 +37,19 @@ size = Vector2(40, 40)
 subdivide_width = 20
 subdivide_depth = 20
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_r4agb"]
-shader = ExtResource("8_fgqny")
-shader_parameter/Pixelization = 512.0
-
 [sub_resource type="PlaneMesh" id="PlaneMesh_324bv"]
 size = Vector2(40, 40)
 subdivide_width = 200
 subdivide_depth = 200
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_iurt0"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6gnnv"]
+shader = ExtResource("7_v7tbl")
+shader_parameter/hue = 3.739
+shader_parameter/saturation = 1.2
+shader_parameter/brightness = 1.264
+shader_parameter/contrast = 0.603
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_ikywk")
@@ -54,6 +58,7 @@ script = ExtResource("1_ikywk")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 14.1413, 0)
 use_collision = true
 size = Vector3(40.4731, 0.0906145, 44.8961)
+material = SubResource("StandardMaterial3D_jyu5b")
 
 [node name="Player" parent="." instance=ExtResource("1_dha7o")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15.1998, -4.77532)
@@ -63,6 +68,7 @@ environment = SubResource("Environment_ph5ts")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.505895, 0.834914, -0.216768, 0.538253, -0.109174, 0.835682, 0.674057, -0.539444, -0.504626, 0, 27.7275, 0)
+light_color = Color(0.952941, 0.94902, 0.952941, 1)
 shadow_enabled = true
 shadow_opacity = 0.95
 directional_shadow_split_1 = 0.161
@@ -87,13 +93,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39.4025, 14.1413, 0)
 use_collision = true
 size = Vector3(22.5097, 5.84383, 7.78585)
 
-[node name="PixelPostprocess" type="Sprite2D" parent="."]
-visible = false
-material = SubResource("ShaderMaterial_r4agb")
-scale = Vector2(15, 8.4375)
-texture = ExtResource("9_fu568")
-centered = false
-
 [node name="DamagedSword" parent="." instance=ExtResource("6_0eqoa")]
 transform = Transform3D(-0.127151, 0, -0.991883, 0.359964, -0.931824, -0.0461444, -0.924261, -0.36291, 0.118483, 47.8066, 17.8438, 0.756506)
 
@@ -115,3 +114,21 @@ sides = 32
 
 [node name="starblade_wielder_gametest" parent="." instance=ExtResource("8_2uukl")]
 transform = Transform3D(-1.25, 0, -1.88745e-07, 0, 1.25, 0, 1.88745e-07, 0, -1.25, 3.76324, 14.1786, -14.1556)
+
+[node name="PostProcessCanvas" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="Shader1" type="ColorRect" parent="PostProcessCanvas"]
+material = SubResource("ShaderMaterial_6gnnv")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.1193, 17, -10.0195)
+light_color = Color(0.752941, 0.0156863, 0.443137, 1)
+light_energy = 6.496
+omni_range = 6.056
+omni_attenuation = 0.615573
