@@ -59,5 +59,4 @@ void fragment()
 	
 	//ALBEDO = screen_col.rgb * contrast_multiplier;
 	//EMISSION = screen_col.rgb * contrast_multiplier;
-	//EMISSION = light_threshold * contrast_multiplier;;
 }
