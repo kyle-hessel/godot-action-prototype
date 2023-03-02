@@ -1,9 +1,0 @@
-[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://dwsg7rc2r8eay"]
-
-[ext_resource type="Texture2D" uid="uid://c0j12w4p1oig5" path="res://3D_models/characters/starblade_wielder_clothes_normal.png" id="1_en0l4"]
-
-[resource]
-albedo_color = Color(0.294118, 0.388235, 0.505882, 1)
-roughness = 0.75
-normal_enabled = true
-normal_texture = ExtResource("1_en0l4")

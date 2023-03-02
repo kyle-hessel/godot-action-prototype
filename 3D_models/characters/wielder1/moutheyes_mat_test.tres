@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://c56qxbijxu5r0"]
+
+[ext_resource type="Texture2D" uid="uid://ckwd6a7a1kglw" path="res://3D_models/characters/wielder1/wielder_moutheyes_color.png" id="1_7swj6"]
+
+[resource]
+albedo_texture = ExtResource("1_7swj6")
+roughness = 0.15

@@ -1,12 +1,14 @@
-[gd_scene load_steps=17 format=3 uid="uid://chcm73f8ivski"]
+[gd_scene load_steps=26 format=3 uid="uid://6wha0t4kjudv"]
 
-[ext_resource type="PackedScene" uid="uid://bq1uivhkbxtb8" path="res://scenes/player.tscn" id="1_dha7o"]
+[ext_resource type="PackedScene" uid="uid://bueuj0ghwdj2c" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
-[ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/water.tres" id="2_20y4g"]
+[ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/experimental/water.tres" id="3_c4y8b"]
+[ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
 [ext_resource type="PackedScene" uid="uid://dnagf8yaneit5" path="res://scenes/damaged_sword.tscn" id="6_0eqoa"]
-[ext_resource type="Material" uid="uid://b47ubq03xxlkt" path="res://shaders/realistic_water.tres" id="7_ktmp4"]
-[ext_resource type="Shader" path="res://shaders/canvas_pp_test.gdshader" id="7_v7tbl"]
-[ext_resource type="PackedScene" uid="uid://bhhc6vwfe1s0o" path="res://3D_models/characters/starblade_wielder_gametest.tscn" id="8_2uukl"]
+[ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
+[ext_resource type="PackedScene" uid="uid://dd2uuot4f4jtt" path="res://3D_models/items/tent_simple.tscn" id="8_yh6tl"]
+[ext_resource type="PackedScene" uid="uid://dcby1uydmu4fo" path="res://3D_models/items/firepit.tscn" id="9_adnie"]
+[ext_resource type="PackedScene" uid="uid://37frg03lohwn" path="res://3D_models/characters/wielder1/starblade_wielder_gametest3.tscn" id="11_2tt78"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jyu5b"]
 albedo_color = Color(0.709804, 0.678431, 0.643137, 1)
@@ -18,17 +20,21 @@ sky_material = SubResource("PhysicalSkyMaterial_8bey6")
 
 [sub_resource type="Environment" id="Environment_ph5ts"]
 background_mode = 2
+background_energy_multiplier = 1.2
 sky = SubResource("Sky_qvm31")
 tonemap_mode = 3
 tonemap_exposure = 0.47
 tonemap_white = 0.47
+ssr_enabled = true
 ssao_enabled = true
+ssil_enabled = true
+sdfgi_enabled = true
 sdfgi_use_occlusion = true
-sdfgi_energy = 0.5
+sdfgi_energy = 0.6
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_yots1"]
 render_priority = 0
-shader = ExtResource("2_20y4g")
+shader = ExtResource("3_c4y8b")
 shader_parameter/ColorParameter = Color(4e-05, 0.437882, 0.846476, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_6urk2"]
@@ -42,10 +48,60 @@ size = Vector2(40, 40)
 subdivide_width = 200
 subdivide_depth = 200
 
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_xr3s2"]
+noise_type = 3
+fractal_type = 2
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_w4raw"]
+seamless = true
+as_normal_map = true
+bump_strength = 6.0
+noise = SubResource("FastNoiseLite_xr3s2")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_df5bd"]
+noise_type = 3
+seed = 10
+fractal_type = 2
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_ofed7"]
+seamless = true
+as_normal_map = true
+noise = SubResource("FastNoiseLite_df5bd")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_le55h"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_gv1jq"]
+seamless = true
+noise = SubResource("FastNoiseLite_le55h")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5kk61"]
+render_priority = 0
+shader = ExtResource("5_71bb4")
+shader_parameter/albedo = Color(0.0588235, 0.419608, 0.564706, 1)
+shader_parameter/albedo2 = Color(0.415686, 0.12549, 0.415686, 1)
+shader_parameter/metallic = 0.0
+shader_parameter/roughness = 0.02
+shader_parameter/wave_direction = Vector2(2, 0)
+shader_parameter/wave_direction2 = Vector2(0, 1)
+shader_parameter/time_scale = 0.025
+shader_parameter/noise_scale = 10.0
+shader_parameter/height_scale = 2.0
+shader_parameter/color_deep = Color(0.117647, 0.231373, 0.423529, 1)
+shader_parameter/color_shallow = Color(0.835294, 0.866667, 0.964706, 1)
+shader_parameter/beers_law = 2.0
+shader_parameter/depth_offset = -0.75
+shader_parameter/edge_scale = 0.1
+shader_parameter/near = 1.0
+shader_parameter/far = 100.0
+shader_parameter/edge_color = Color(1, 1, 1, 1)
+shader_parameter/wave = SubResource("NoiseTexture2D_gv1jq")
+shader_parameter/texture_normal = SubResource("NoiseTexture2D_w4raw")
+shader_parameter/texture_normal2 = SubResource("NoiseTexture2D_ofed7")
+
 [sub_resource type="CylinderMesh" id="CylinderMesh_iurt0"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_6gnnv"]
-shader = ExtResource("7_v7tbl")
+shader = ExtResource("7_e30dh")
 shader_parameter/hue = 3.739
 shader_parameter/saturation = 1.2
 shader_parameter/brightness = 1.264
@@ -102,7 +158,7 @@ transform = Transform3D(0.806, 0, 0, 0, 0.11, 0, 0, 0, 1, 0.519861, 13.6444, -42
 sorting_offset = 100.0
 cast_shadow = 0
 mesh = SubResource("PlaneMesh_324bv")
-surface_material_override/0 = ExtResource("7_ktmp4")
+surface_material_override/0 = SubResource("ShaderMaterial_5kk61")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.57126, 13.5198, -24.4885)
@@ -113,9 +169,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00468922, 13.3909, -26.586
 use_collision = true
 radius = 1.1352
 sides = 32
-
-[node name="starblade_wielder_gametest" parent="." instance=ExtResource("8_2uukl")]
-transform = Transform3D(-1.25, 0, -1.88745e-07, 0, 1.25, 0, 1.88745e-07, 0, -1.25, 3.76324, 14.1786, -14.1556)
 
 [node name="PostProcessCanvas" type="CanvasLayer" parent="."]
 visible = false
@@ -134,3 +187,12 @@ light_color = Color(0.752941, 0.0156863, 0.443137, 1)
 light_energy = 6.496
 omni_range = 6.056
 omni_attenuation = 0.615573
+
+[node name="Tent_Simple" parent="." instance=ExtResource("8_yh6tl")]
+transform = Transform3D(0.820252, 0, -0.572003, 0, 1, 0, 0.572003, 0, 0.820252, 8.99021, 14.2402, -12.3911)
+
+[node name="firepit" parent="." instance=ExtResource("9_adnie")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.63346, 14.1866, -17.1197)
+
+[node name="starblade_wielder_gametest3" parent="." instance=ExtResource("11_2tt78")]
+transform = Transform3D(-1.25, 0, -1.88745e-07, 0, 1.25, 0, 1.88745e-07, 0, -1.25, 1.20944, 14.1866, -14.1363)

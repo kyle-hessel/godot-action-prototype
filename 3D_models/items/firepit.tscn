@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dcby1uydmu4fo"]
+
+[ext_resource type="PackedScene" uid="uid://b0j8gnevk4n1y" path="res://3D_models/items/firepit.glb" id="1_uhbwm"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_edyxa"]
+albedo_color = Color(0.752941, 0.32549, 0.333333, 1)
+
+[node name="firepit" instance=ExtResource("1_uhbwm")]
+
+[node name="rocks" parent="." index="0"]
+surface_material_override/0 = SubResource("StandardMaterial3D_edyxa")

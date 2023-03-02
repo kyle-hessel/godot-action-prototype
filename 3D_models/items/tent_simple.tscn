@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dd2uuot4f4jtt"]
+
+[ext_resource type="PackedScene" uid="uid://tpjaf5o0y1f7" path="res://3D_models/items/Tent_Simple.glb" id="1_8fjgt"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h4bqn"]
+albedo_color = Color(0.443137, 0.560784, 0.266667, 1)
+
+[node name="Tent_Simple" instance=ExtResource("1_8fjgt")]
+
+[node name="Tent" parent="." index="0"]
+surface_material_override/0 = SubResource("StandardMaterial3D_h4bqn")

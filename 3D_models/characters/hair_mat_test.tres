@@ -1,8 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://pg5s314bqun7"]
-
-[resource]
-albedo_color = Color(0.866667, 0.6, 0.294118, 1)
-roughness = 0.8
-subsurf_scatter_enabled = true
-subsurf_scatter_strength = 1.0
-subsurf_scatter_skin_mode = true
