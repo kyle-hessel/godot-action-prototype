@@ -111,7 +111,7 @@ bones/95/rotation = Quaternion(-0.0641849, -0.0183936, -0.0155904, 0.997647)
 bones/110/rotation = Quaternion(0.707155, -9.23233e-06, 0.707059, 1.38357e-07)
 
 [node name="RightHandAttachment" type="BoneAttachment3D" parent="hooded_character/HoodedCharacterGameRig/Skeleton3D" index="1"]
-transform = Transform3D(-0.0273457, -0.424565, -0.904984, -0.209942, -0.882692, 0.420451, -0.977331, 0.201492, -0.0649963, -0.21083, 0.922615, -0.069856)
+transform = Transform3D(-0.0273462, -0.424565, -0.904984, -0.209943, -0.882692, 0.420451, -0.977331, 0.201493, -0.0649963, -0.21083, 0.922615, -0.0698552)
 bone_name = "hand.r"
 bone_idx = 65
 

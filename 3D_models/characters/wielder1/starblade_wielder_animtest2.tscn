@@ -1,0 +1,61 @@
+[gd_scene load_steps=4 format=3 uid="uid://bojaggr8j3xba"]
+
+[ext_resource type="PackedScene" uid="uid://1dn61cnqh1di" path="res://3D_models/characters/wielder1/starblade_wielder_rootmotion_test.glb" id="1_uh58c"]
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_4apuj"]
+animation = &"rootmotion_vertical"
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_qj3cr"]
+nodes/Animation/node = SubResource("AnimationNodeAnimation_4apuj")
+nodes/Animation/position = Vector2(40, 140)
+node_connections = [&"output", 0, &"Animation"]
+
+[node name="starblade_wielder_rootmotion_test" instance=ExtResource("1_uh58c")]
+
+[node name="Skeleton3D" parent="Armature" index="0"]
+bones/1/position = Vector3(-0.0191719, -0.0705101, 0.847549)
+bones/1/rotation = Quaternion(0.470085, 0.0176345, -0.0696719, 0.87969)
+bones/60/rotation = Quaternion(1.88477e-07, 0.707107, 0.707107, -1.86841e-07)
+bones/61/rotation = Quaternion(1.53217e-07, 0.707107, 0.707107, -1.54434e-07)
+bones/63/rotation = Quaternion(-0.511828, 0.0637767, -0.179417, 0.83772)
+bones/64/rotation = Quaternion(-0.0507599, 0.0760687, -0.0822303, 0.992409)
+bones/65/rotation = Quaternion(0.0452502, -0.0161997, 0.0252775, 0.998524)
+bones/66/position = Vector3(-0.0223869, 0.239024, -0.000521588)
+bones/66/rotation = Quaternion(0.0209532, -0.127635, 0.0954452, 0.986996)
+bones/70/position = Vector3(-0.00786689, 0.24478, 0.00741149)
+bones/70/rotation = Quaternion(-0.000453432, -0.0688118, 0.0613724, 0.99574)
+bones/74/position = Vector3(0.00808447, 0.247124, 0.00976382)
+bones/74/rotation = Quaternion(0.00117325, -0.0526662, 0.0288882, 0.998194)
+bones/78/position = Vector3(0.0214111, 0.245698, 0.00905587)
+bones/78/rotation = Quaternion(-0.00783015, 0.0545185, -0.0499989, 0.997229)
+bones/82/position = Vector3(0.0246374, 0.221956, -0.00419486)
+bones/82/rotation = Quaternion(0.222037, 0.742286, -0.336709, 0.535106)
+bones/86/rotation = Quaternion(-0.511828, -0.0637763, 0.179418, 0.83772)
+bones/87/rotation = Quaternion(-0.0507596, -0.0760688, 0.0822284, 0.992409)
+bones/88/rotation = Quaternion(0.0452502, 0.0161997, -0.0252764, 0.998524)
+bones/89/position = Vector3(0.0223867, 0.239024, -0.000521624)
+bones/89/rotation = Quaternion(0.020953, 0.127635, -0.0954441, 0.986996)
+bones/93/position = Vector3(0.00786676, 0.244779, 0.00741139)
+bones/93/rotation = Quaternion(-0.000453574, 0.0688118, -0.0613714, 0.99574)
+bones/97/position = Vector3(-0.00808459, 0.247123, 0.00976381)
+bones/97/rotation = Quaternion(0.00117317, 0.0526663, -0.0288871, 0.998194)
+bones/101/position = Vector3(-0.0214113, 0.245697, 0.00905586)
+bones/101/rotation = Quaternion(-0.00783009, -0.0545185, 0.05, 0.997229)
+bones/105/position = Vector3(-0.0246374, 0.221956, -0.00419491)
+bones/105/rotation = Quaternion(0.222038, -0.742286, 0.33671, 0.535105)
+bones/108/rotation = Quaternion(0.00793493, 0.155677, 0.987725, -0.0100811)
+bones/109/rotation = Quaternion(-0.0504753, 0.000446529, -0.0185212, 0.998554)
+bones/110/rotation = Quaternion(0.548967, -0.011972, 0.0276089, 0.835302)
+bones/112/rotation = Quaternion(-0.00793481, 0.155673, 0.987725, 0.010081)
+bones/113/rotation = Quaternion(-0.0504659, -0.000446401, 0.0185212, 0.998554)
+bones/114/rotation = Quaternion(0.548963, 0.0119718, -0.0276089, 0.835305)
+
+[node name="AnimationTree" type="AnimationTree" parent="." index="2"]
+tree_root = SubResource("AnimationNodeBlendTree_qj3cr")
+anim_player = NodePath("../AnimationPlayer")
+active = true
+root_motion_track = NodePath("Armature/Skeleton3D:root")
+
+[node name="RootMotionView" type="RootMotionView" parent="." index="3"]
+animation_path = NodePath("../AnimationTree")
+zero_y = false
