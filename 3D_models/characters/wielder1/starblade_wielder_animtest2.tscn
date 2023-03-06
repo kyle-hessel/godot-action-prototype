@@ -13,10 +13,10 @@ node_connections = [&"output", 0, &"Animation"]
 [node name="starblade_wielder_rootmotion_test" instance=ExtResource("1_uh58c")]
 
 [node name="Skeleton3D" parent="Armature" index="0"]
-bones/1/position = Vector3(-0.0191719, -0.0705101, 0.847549)
-bones/1/rotation = Quaternion(0.470085, 0.0176345, -0.0696719, 0.87969)
-bones/60/rotation = Quaternion(1.88477e-07, 0.707107, 0.707107, -1.86841e-07)
-bones/61/rotation = Quaternion(1.53217e-07, 0.707107, 0.707107, -1.54434e-07)
+bones/1/position = Vector3(-0.0271834, -0.104962, 0.881873)
+bones/1/rotation = Quaternion(0.303979, 0.0243759, -0.0963065, 0.947485)
+bones/60/rotation = Quaternion(1.73679e-07, 0.707107, 0.707107, -1.81725e-07)
+bones/61/rotation = Quaternion(1.57624e-07, 0.707107, 0.707107, -1.5095e-07)
 bones/63/rotation = Quaternion(-0.511828, 0.0637767, -0.179417, 0.83772)
 bones/64/rotation = Quaternion(-0.0507599, 0.0760687, -0.0822303, 0.992409)
 bones/65/rotation = Quaternion(0.0452502, -0.0161997, 0.0252775, 0.998524)
@@ -55,7 +55,3 @@ tree_root = SubResource("AnimationNodeBlendTree_qj3cr")
 anim_player = NodePath("../AnimationPlayer")
 active = true
 root_motion_track = NodePath("Armature/Skeleton3D:root")
-
-[node name="RootMotionView" type="RootMotionView" parent="." index="3"]
-animation_path = NodePath("../AnimationTree")
-zero_y = false
