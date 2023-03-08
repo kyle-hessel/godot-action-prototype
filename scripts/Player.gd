@@ -23,8 +23,9 @@ var ground_dir_cache: Vector3
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var gravity_multiplier: float = 1.0
 
-@onready var weapon_slot: Node3D = $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/WeaponSlot
-@onready var vanish_timer: Timer = $hooded_character/HoodedCharacterGameRig/Skeleton3D/RightHandAttachment/VanishTimer
+@onready var anim_tree : AnimationTree = $starblade_wielder/AnimationTree
+@onready var weapon_slot_right: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand
+@onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/VanishTimer
 
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 0.05
@@ -37,7 +38,8 @@ var weapon_drawn: bool = false
 enum PlayerMovementState {
 	IDLE = 0,
 	WALK = 1,
-	SPRINT = 2
+	SPRINT = 2,
+	ATTACK = 3
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
@@ -46,6 +48,8 @@ var blending_movement_state: bool = false;
 
 func _ready():
 	Engine.max_fps = 144
+	
+	
 	
 	# capture mouse movement for camera navigation
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -75,7 +79,8 @@ func _physics_process(delta: float) -> void:
 	rotate_cam_joypad()
 	
 	# Set the player's animation tree blending value equal to the player's current speed.
-	$hooded_character/AnimationTree.set("parameters/IdleWalkRun/blend_position", velocity.length())
+	anim_tree.set("parameters/IdleWalkRun_Jump/IdleWalkRunBlendspace/blend_position", velocity.length())
+	
 
 	# Collisions
 	#@warning_ignore(return_value_discarded) # makes debugger shut up
@@ -108,6 +113,11 @@ func apply_jump_and_gravity(delta: float) -> void:
 		if (inputting_movement):
 			midair_direction_changes += 1
 		
+		# start fall animation
+		if !is_jumping:
+			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", false)
+			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/fall_start", true)
+		
 	# hitting the ground
 	else:
 		if is_jumping:
@@ -115,6 +125,13 @@ func apply_jump_and_gravity(delta: float) -> void:
 			jumps_remaining = max_jumps
 			midair_direction_changes = 0
 			air_drag_percentage = air_drag_percentage_max
+			# start jump end animation out of jump
+			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_start", false)
+			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", true)
+		else:
+			# start 'jump' end animation (fall end, in this case) out of fall.
+			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/fall_start", false)
+			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", true)
 
 	# Jumping
 	if Input.is_action_just_pressed("jump") && jumps_remaining > 0:
@@ -130,8 +147,11 @@ func apply_jump_and_gravity(delta: float) -> void:
 				velocity.y = jump_velocity * jump_velocity_multiplier
 				player_speed_cached = player_speed_current
 		
-		#$hooded_character/AnimationTree.set("parameters/JumpShot/active", true)
+		# start jump animation
+		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", false)
+		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_start", true)
 	
+		#starblade_wielder/AnimationTree.set("parameters/JumpShot/active", true)
 	
 func calculate_player_lateral_movement(delta: float) -> void:
 	
@@ -192,9 +212,9 @@ func calculate_player_lateral_movement(delta: float) -> void:
 			apply_player_lateral_movement(direction, 1.0)
 		
 		# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
-		if $hooded_character.rotation.y != $SpringArm3D.rotation.y:
+		if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
 			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
-			$hooded_character.rotation.y = lerp_angle($hooded_character.rotation.y, atan2(-velocity.x, -velocity.z), player_rotation_rate * delta)
+			$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
 		
 	# if there's no input, determine how/if we decelerate.
 	else:
@@ -307,7 +327,7 @@ func handle_weapon_actions(event) -> void:
 		
 func handle_weapon_updates() -> void:
 	if current_weapon != null:
-		current_weapon.global_transform = weapon_slot.global_transform
+		current_weapon.global_transform = weapon_slot_right.global_transform
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:

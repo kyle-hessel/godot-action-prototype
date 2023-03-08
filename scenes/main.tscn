@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3 uid="uid://6wha0t4kjudv"]
+[gd_scene load_steps=25 format=3 uid="uid://dejwcfhb645ke"]
 
 [ext_resource type="PackedScene" uid="uid://bueuj0ghwdj2c" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
@@ -8,7 +8,6 @@
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
 [ext_resource type="PackedScene" uid="uid://dd2uuot4f4jtt" path="res://3D_models/items/tent_simple.tscn" id="8_yh6tl"]
 [ext_resource type="PackedScene" uid="uid://dcby1uydmu4fo" path="res://3D_models/items/firepit.tscn" id="9_adnie"]
-[ext_resource type="PackedScene" uid="uid://37frg03lohwn" path="res://3D_models/characters/wielder1/starblade_wielder_gametest3.tscn" id="11_2tt78"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jyu5b"]
 albedo_color = Color(0.709804, 0.678431, 0.643137, 1)
@@ -117,7 +116,7 @@ size = Vector3(40.4731, 0.0906145, 44.8961)
 material = SubResource("StandardMaterial3D_jyu5b")
 
 [node name="Player" parent="." instance=ExtResource("1_dha7o")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15.1998, -4.77532)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15.2297, -4.77532)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_ph5ts")
@@ -170,6 +169,20 @@ use_collision = true
 radius = 1.1352
 sides = 32
 
+[node name="CSGCylinder3D2" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00468922, 14.7163, -18.8029)
+use_collision = true
+radius = 1.1352
+height = 5.91853
+sides = 32
+
+[node name="CSGCylinder3D3" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00468922, 14.7163, -16.0389)
+use_collision = true
+radius = 1.1352
+height = 2.64738
+sides = 32
+
 [node name="PostProcessCanvas" type="CanvasLayer" parent="."]
 visible = false
 
@@ -193,6 +206,3 @@ transform = Transform3D(0.820252, 0, -0.572003, 0, 1, 0, 0.572003, 0, 0.820252, 
 
 [node name="firepit" parent="." instance=ExtResource("9_adnie")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.63346, 14.1866, -17.1197)
-
-[node name="starblade_wielder_gametest3" parent="." instance=ExtResource("11_2tt78")]
-transform = Transform3D(-1.25, 0, -1.88745e-07, 0, 1.25, 0, 1.88745e-07, 0, -1.25, 1.20944, 14.1866, -14.1363)
