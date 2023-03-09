@@ -29,7 +29,7 @@ var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_tick
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand/Wielder1_Sword2
 
 @export var mouse_sensitivity: float = 2.5
-@export var joystick_sensitivity: float = 4.0
+@export var joystick_sensitivity: float = 3.0
 
 var overlapping_object: Node3D = null
 var weapon_drawn: bool = false
@@ -59,10 +59,9 @@ func _ready():
 
 # fluctuating framerate-based delta time
 func _process(delta: float) -> void:
-	# Camera w/ controller (should see if we can only call this if using a controller input this frame)
-	rotate_cam_joypad(delta)
+#	rotate_cam_joypad(delta)
 	
-	print(Engine.get_frames_per_second())
+	#print(Engine.get_frames_per_second())
 	#print(physics_tick)
 	
 	# determined in _physics_process, meaning has_direction updates at a fixed speed unlike the rest of this function.
@@ -83,6 +82,9 @@ func _physics_process(delta: float) -> void:
 	
 	#print(player_speed_current)
 	#print(velocity.length())
+	
+	# Camera w/ controller (should see if we can only call this if using a controller input this frame)
+	rotate_cam_joypad(delta)
 	
 	# Set the player's animation tree blending value equal to the player's current speed.
 	anim_tree.set("parameters/IdleWalkRun_Jump/IdleWalkRunBlendspace/blend_position", velocity.length())
