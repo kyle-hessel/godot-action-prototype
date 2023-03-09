@@ -20,7 +20,7 @@ var is_jumping: bool = false
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var gravity_multiplier: float = 1.0
 
-@onready var anim_tree : AnimationTree = $starblade_wielder/AnimationTree
+@onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
 @onready var weapon_slot_right: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/VanishTimer
 
@@ -104,7 +104,7 @@ func apply_jump_and_gravity(delta: float) -> void:
 		# check for directional switches in midair
 		var inputting_movement: bool = Input.is_action_just_released("forward") || Input.is_action_just_released("backward") || Input.is_action_just_released("left") || Input.is_action_just_released("right")
 		
-		# start fall animation
+		# start fall animation (same as jump)
 		if !is_jumping:
 			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", false)
 			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/fall_start", true)
@@ -129,19 +129,23 @@ func apply_jump_and_gravity(delta: float) -> void:
 			jumps_remaining -= 1
 			is_jumping = true
 			velocity.y = jump_velocity * jump_velocity_multiplier
+			
+			# early out of double jump animation if hitting the ground early.
+			if (anim_tree.get("parameters/DoubleJumpShot/active") == true):
+				anim_tree.set("parameters/DoubleJumpShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
 	
 		# stop player from beginning jumping sequence while falling
 		else:
 			if jumps_remaining < max_jumps:
 				jumps_remaining -= 1
 				velocity.y = jump_velocity * jump_velocity_multiplier
-#				player_speed_cached = player_speed_current
+#				
+				# start double jump oneshot
+				anim_tree.set("parameters/DoubleJumpShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 		
 		# start jump animation
 		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", false)
 		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_start", true)
-	
-		#starblade_wielder/AnimationTree.set("parameters/JumpShot/active", true)
 	
 func calculate_player_lateral_movement(delta: float) -> void:
 	
@@ -190,7 +194,7 @@ func apply_player_lateral_movement(dir: Vector3, modifier: float = 1.0) -> void:
 		velocity.x = dir.x * player_speed_current * modifier
 		velocity.z = dir.z * player_speed_current * modifier
 	else:
-		var player_speed_jump = player_speed_current * player_jump_speed_modifier
+		var player_speed_jump: float = player_speed_current * player_jump_speed_modifier
 		velocity.x = dir.x * player_speed_jump * modifier
 		velocity.z = dir.z * player_speed_jump * modifier
 

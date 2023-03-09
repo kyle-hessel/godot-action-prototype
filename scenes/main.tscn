@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://dejwcfhb645ke"]
+[gd_scene load_steps=22 format=3 uid="uid://dejwcfhb645ke"]
 
 [ext_resource type="PackedScene" uid="uid://bueuj0ghwdj2c" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
@@ -6,8 +6,6 @@
 [ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
 [ext_resource type="PackedScene" uid="uid://dnagf8yaneit5" path="res://scenes/damaged_sword.tscn" id="6_0eqoa"]
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
-[ext_resource type="PackedScene" uid="uid://dd2uuot4f4jtt" path="res://3D_models/items/tent_simple.tscn" id="8_yh6tl"]
-[ext_resource type="PackedScene" uid="uid://dcby1uydmu4fo" path="res://3D_models/items/firepit.tscn" id="9_adnie"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jyu5b"]
 albedo_color = Color(0.709804, 0.678431, 0.643137, 1)
@@ -97,8 +95,6 @@ shader_parameter/wave = SubResource("NoiseTexture2D_gv1jq")
 shader_parameter/texture_normal = SubResource("NoiseTexture2D_w4raw")
 shader_parameter/texture_normal2 = SubResource("NoiseTexture2D_ofed7")
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_iurt0"]
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_6gnnv"]
 shader = ExtResource("7_e30dh")
 shader_parameter/hue = 3.739
@@ -159,14 +155,16 @@ cast_shadow = 0
 mesh = SubResource("PlaneMesh_324bv")
 surface_material_override/0 = SubResource("ShaderMaterial_5kk61")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.57126, 13.5198, -24.4885)
-mesh = SubResource("CylinderMesh_iurt0")
-
 [node name="CSGCylinder3D" type="CSGCylinder3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00468922, 13.3909, -26.5866)
 use_collision = true
 radius = 1.1352
+sides = 32
+
+[node name="CSGCylinder3D4" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.17046, 13.3909, -25.3076)
+use_collision = true
+radius = 0.440608
 sides = 32
 
 [node name="CSGCylinder3D2" type="CSGCylinder3D" parent="."]
@@ -193,16 +191,3 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="OmniLight3D" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.1193, 17, -10.0195)
-light_color = Color(0.752941, 0.0156863, 0.443137, 1)
-light_energy = 6.496
-omni_range = 6.056
-omni_attenuation = 0.615573
-
-[node name="Tent_Simple" parent="." instance=ExtResource("8_yh6tl")]
-transform = Transform3D(0.820252, 0, -0.572003, 0, 1, 0, 0.572003, 0, 0.820252, 8.99021, 14.2402, -12.3911)
-
-[node name="firepit" parent="." instance=ExtResource("9_adnie")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.63346, 14.1866, -17.1197)
