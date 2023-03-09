@@ -13,11 +13,14 @@ var player_speed_current: float = 0.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
+
+var has_direction: bool = false
 var jumps_remaining: int = max_jumps
 var is_jumping: bool = false
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_ticks_per_second")
 @export var gravity_multiplier: float = 1.0
 
 @onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
@@ -53,10 +56,20 @@ func _ready():
 	# might be a godot bug? check later in stable version. it's a harmless fix regardless, albeit odd that it works.
 	#$SpringArm3D.rotation.y += 0.001
 
+
 # fluctuating framerate-based delta time
 func _process(delta: float) -> void:
 	# Camera w/ controller (should see if we can only call this if using a controller input this frame)
 	rotate_cam_joypad(delta)
+	
+	print(Engine.get_frames_per_second())
+	#print(physics_tick)
+	
+	# determined in _physics_process, meaning has_direction updates at a fixed speed unlike the rest of this function.
+	# that means it could be out of sync for some frames at times. doesn't seem to cause an issue, though.
+	if has_direction:
+		rotate_player(delta)
+
 
 # difference from _process: https://godotengine.org/qa/57458/difference-between-_process-_physics_process-have-script
 # tl;dr stable delta time
@@ -79,8 +92,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	
 	#print(movement_state)
-	
-	
+
+
 func _input(event):
 	# Camera w/ mouse (should see if we can only call this if using a keyboard input this frame)
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
@@ -88,10 +101,16 @@ func _input(event):
 	
 	# using 'event.' instead of 'Input.' for better input event buffering.
 	handle_weapon_actions(event)
-	
-	
+
+
+func rotate_player(delta: float):
+	# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
+	if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
+		# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
+		$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
+
+
 func apply_jump_and_gravity(delta: float) -> void:
-	
 	# Apply gravity, reset jumps
 	if not is_on_floor():
 		velocity.y -= gravity * gravity_multiplier * delta
@@ -141,7 +160,8 @@ func apply_jump_and_gravity(delta: float) -> void:
 		# start jump animation
 		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", false)
 		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_start", true)
-	
+
+
 func calculate_player_lateral_movement(delta: float) -> void:
 	
 	# Get the input direction.
@@ -159,6 +179,7 @@ func calculate_player_lateral_movement(delta: float) -> void:
 	
 	# recombine separated direction vectors back into one.
 	var direction: Vector3 = direction_x + direction_z
+	has_direction = true if direction != Vector3() else false # this is gdscript's ternary expr.
 	
 	if direction.length() > 1.0:
 		direction = direction.normalized()
@@ -173,11 +194,7 @@ func calculate_player_lateral_movement(delta: float) -> void:
 
 		apply_player_lateral_movement(direction)
 		
-		# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
-		if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
-			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
-			$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
-		
+	
 	# if there's no input, determine how/if we decelerate.
 	else:
 		#if (is_jumping == false):
@@ -296,8 +313,8 @@ func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape
 	print(area.get_parent_node_3d())
 	
 	overlapping_object = area.get_parent_node_3d()
-		
-	
+
+
 func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
 	overlapping_object = null
 
