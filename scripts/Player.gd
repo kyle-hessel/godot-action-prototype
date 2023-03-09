@@ -23,11 +23,11 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
 @onready var weapon_slot_right: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/VanishTimer
+@onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand/Wielder1_Sword2
 
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 0.05
 
-var current_weapon: Node3D = null
 var overlapping_object: Node3D = null
 var weapon_drawn: bool = false
 @export var vanish_timer_duration: float = 10.0
@@ -79,9 +79,6 @@ func _physics_process(delta: float) -> void:
 	# Collisions
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
-	
-	# held weapon tracking, attacking
-	handle_weapon_updates()
 	
 	#print(movement_state)
 	
@@ -284,22 +281,17 @@ func rotate_cam_joypad() -> void:
 	
 
 func handle_weapon_actions(event) -> void:
-	if (event.is_action_pressed("equip_weapon") && overlapping_object != null && current_weapon == null):
-		weapon_drawn = true
-		current_weapon = overlapping_object
-		vanish_timer.start(vanish_timer_duration)
-		
-	if (event.is_action_pressed("attack") && current_weapon != null && weapon_drawn == false):
+	if (event.is_action_pressed("attack") && weapon_drawn == false):
 		weapon_drawn = !weapon_drawn
 		current_weapon.visible = weapon_drawn
 		vanish_timer.start(vanish_timer_duration)
-	elif (event.is_action_pressed("attack") && current_weapon != null && weapon_drawn == true):
+	elif (event.is_action_pressed("attack") && weapon_drawn == true):
 		vanish_timer.start(vanish_timer_duration)
 	
 		
-func handle_weapon_updates() -> void:
-	if current_weapon != null:
-		current_weapon.global_transform = weapon_slot_right.global_transform
+#func handle_weapon_updates() -> void:
+#	if current_weapon != null:
+#		current_weapon.global_transform = weapon_slot_right.global_transform
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:

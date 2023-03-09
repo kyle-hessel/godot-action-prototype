@@ -1,10 +1,9 @@
-[gd_scene load_steps=22 format=3 uid="uid://dejwcfhb645ke"]
+[gd_scene load_steps=21 format=3 uid="uid://dejwcfhb645ke"]
 
 [ext_resource type="PackedScene" uid="uid://bueuj0ghwdj2c" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/experimental/water.tres" id="3_c4y8b"]
 [ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
-[ext_resource type="PackedScene" uid="uid://dnagf8yaneit5" path="res://scenes/damaged_sword.tscn" id="6_0eqoa"]
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jyu5b"]
@@ -144,9 +143,6 @@ mesh = SubResource("PlaneMesh_6urk2")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39.4025, 14.1413, 0)
 use_collision = true
 size = Vector3(22.5097, 5.84383, 7.78585)
-
-[node name="DamagedSword" parent="." instance=ExtResource("6_0eqoa")]
-transform = Transform3D(-0.127151, 0, -0.991883, 0.359964, -0.931824, -0.0461444, -0.924261, -0.36291, 0.118483, 47.8066, 17.8438, 0.756506)
 
 [node name="Water2" type="MeshInstance3D" parent="."]
 transform = Transform3D(0.806, 0, 0, 0, 0.11, 0, 0, 0, 1, 0.519861, 13.6444, -42.3058)
