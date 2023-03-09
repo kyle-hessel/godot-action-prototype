@@ -26,7 +26,7 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand/Wielder1_Sword2
 
 @export var mouse_sensitivity: float = 2.5
-@export var joystick_sensitivity: float = 0.05
+@export var joystick_sensitivity: float = 4.0
 
 var overlapping_object: Node3D = null
 var weapon_drawn: bool = false
@@ -55,7 +55,8 @@ func _ready():
 
 # fluctuating framerate-based delta time
 func _process(delta: float) -> void:
-	pass
+	# Camera w/ controller (should see if we can only call this if using a controller input this frame)
+	rotate_cam_joypad(delta)
 
 # difference from _process: https://godotengine.org/qa/57458/difference-between-_process-_physics_process-have-script
 # tl;dr stable delta time
@@ -70,9 +71,6 @@ func _physics_process(delta: float) -> void:
 	#print(player_speed_current)
 	#print(velocity.length())
 	
-	# Camera (should see if we can only call this if using a controller input this frame)
-	rotate_cam_joypad()
-	
 	# Set the player's animation tree blending value equal to the player's current speed.
 	anim_tree.set("parameters/IdleWalkRun_Jump/IdleWalkRunBlendspace/blend_position", velocity.length())
 
@@ -84,7 +82,7 @@ func _physics_process(delta: float) -> void:
 	
 	
 func _input(event):
-	# Camera (should see if we can only call this if using a keyboard input this frame)
+	# Camera w/ mouse (should see if we can only call this if using a keyboard input this frame)
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
@@ -270,13 +268,13 @@ func rotate_cam_kb_m(event) -> void:
 		#print($SpringArm3D.rotation.x)
 		
 
-func rotate_cam_joypad() -> void:
+func rotate_cam_joypad(delta: float) -> void:
 	# controller spring arm rotation
-	$SpringArm3D.rotation.y -= Input.get_action_strength("camera_left_joystick") * -joystick_sensitivity
-	$SpringArm3D.rotation.y -= Input.get_action_strength("camera_right_joystick") * joystick_sensitivity
+	$SpringArm3D.rotation.y -= Input.get_action_strength("camera_left_joystick") * -joystick_sensitivity * delta
+	$SpringArm3D.rotation.y -= Input.get_action_strength("camera_right_joystick") * joystick_sensitivity * delta
 	
-	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_up_joystick") * -joystick_sensitivity
-	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_down_joystick") * joystick_sensitivity
+	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_up_joystick") * -joystick_sensitivity * delta
+	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_down_joystick") * joystick_sensitivity * delta
 	$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3)
 	
 
