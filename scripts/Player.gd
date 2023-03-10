@@ -24,9 +24,9 @@ var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_tick
 @export var gravity_multiplier: float = 1.0
 
 @onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
-@onready var weapon_slot_right: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand
-@onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/VanishTimer
-@onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/RightHandAttachment/WeaponSlotRightHand/Wielder1_Sword2
+@onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
+@onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
+@onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/Wielder1_Sword2
 
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 3.0

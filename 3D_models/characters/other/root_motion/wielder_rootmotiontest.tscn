@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=4 format=3 uid="uid://c85jhf45iup68"]
 
 [ext_resource type="PackedScene" path="res://3D_models/characters/other/root_motion/starblade_wielder_animtest2.tscn" id="1_1ddys"]
 [ext_resource type="Script" path="res://3D_models/characters/other/root_motion/wielder_rootmotiontest.gd" id="1_powh4"]
@@ -16,9 +16,41 @@ shape = SubResource("CapsuleShape3D_5qa27")
 [node name="starblade_wielder_rootmotion_test" parent="." instance=ExtResource("1_1ddys")]
 
 [node name="Skeleton3D" parent="starblade_wielder_rootmotion_test/Armature" index="0"]
-bones/1/position = Vector3(-0.0329776, -0.12327, 0.92181)
-bones/1/rotation = Quaternion(0.146835, 0.0297289, -0.117455, 0.981713)
-bones/60/rotation = Quaternion(1.14472e-07, 0.707107, 0.707107, -1.13205e-07)
-bones/61/rotation = Quaternion(2.85936e-07, 0.707106, 0.707107, -2.69031e-07)
+bones/1/position = Vector3(-0.0170173, -0.0596092, 0.842057)
+bones/1/rotation = Quaternion(0.509372, 0.0158503, -0.0626229, 0.858118)
+bones/60/rotation = Quaternion(1.7786e-07, 0.707107, 0.707107, -1.7639e-07)
+bones/61/rotation = Quaternion(1.46193e-07, 0.707107, 0.707107, -1.47286e-07)
+bones/63/rotation = Quaternion(-0.511828, 0.0637767, -0.179417, 0.83772)
+bones/64/rotation = Quaternion(-0.0507599, 0.0760687, -0.0822303, 0.992409)
+bones/65/rotation = Quaternion(0.0452502, -0.0161997, 0.0252775, 0.998524)
+bones/66/position = Vector3(-0.0223869, 0.239024, -0.000521588)
+bones/66/rotation = Quaternion(0.0209532, -0.127635, 0.0954452, 0.986996)
+bones/70/position = Vector3(-0.00786689, 0.24478, 0.00741149)
+bones/70/rotation = Quaternion(-0.000453432, -0.0688118, 0.0613724, 0.99574)
+bones/74/position = Vector3(0.00808447, 0.247124, 0.00976382)
+bones/74/rotation = Quaternion(0.00117325, -0.0526662, 0.0288882, 0.998194)
+bones/78/position = Vector3(0.0214111, 0.245698, 0.00905587)
+bones/78/rotation = Quaternion(-0.00783015, 0.0545185, -0.0499989, 0.997229)
+bones/82/position = Vector3(0.0246374, 0.221956, -0.00419486)
+bones/82/rotation = Quaternion(0.222037, 0.742286, -0.336709, 0.535106)
+bones/86/rotation = Quaternion(-0.511828, -0.0637763, 0.179418, 0.83772)
+bones/87/rotation = Quaternion(-0.0507596, -0.0760688, 0.0822284, 0.992409)
+bones/88/rotation = Quaternion(0.0452502, 0.0161997, -0.0252764, 0.998524)
+bones/89/position = Vector3(0.0223867, 0.239024, -0.000521624)
+bones/89/rotation = Quaternion(0.020953, 0.127635, -0.0954441, 0.986996)
+bones/93/position = Vector3(0.00786676, 0.244779, 0.00741139)
+bones/93/rotation = Quaternion(-0.000453574, 0.0688118, -0.0613714, 0.99574)
+bones/97/position = Vector3(-0.00808459, 0.247123, 0.00976381)
+bones/97/rotation = Quaternion(0.00117317, 0.0526663, -0.0288871, 0.998194)
+bones/101/position = Vector3(-0.0214113, 0.245697, 0.00905586)
+bones/101/rotation = Quaternion(-0.00783009, -0.0545185, 0.05, 0.997229)
+bones/105/position = Vector3(-0.0246374, 0.221956, -0.00419491)
+bones/105/rotation = Quaternion(0.222038, -0.742286, 0.33671, 0.535105)
+bones/108/rotation = Quaternion(0.00793493, 0.155677, 0.987725, -0.0100811)
+bones/109/rotation = Quaternion(-0.0504753, 0.000446529, -0.0185212, 0.998554)
+bones/110/rotation = Quaternion(0.548967, -0.011972, 0.0276089, 0.835302)
+bones/112/rotation = Quaternion(-0.00793481, 0.155673, 0.987725, 0.010081)
+bones/113/rotation = Quaternion(-0.0504659, -0.000446401, 0.0185212, 0.998554)
+bones/114/rotation = Quaternion(0.548963, 0.0119718, -0.0276089, 0.835305)
 
 [editable path="starblade_wielder_rootmotion_test"]

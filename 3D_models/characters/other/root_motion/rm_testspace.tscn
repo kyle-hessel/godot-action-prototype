@@ -1,6 +1,6 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=5 format=3 uid="uid://cnkw64slqijat"]
 
-[ext_resource type="PackedScene" path="res://3D_models/characters/other/root_motion/wielder_rootmotiontest.tscn" id="1_whq78"]
+[ext_resource type="PackedScene" uid="uid://c85jhf45iup68" path="res://3D_models/characters/other/root_motion/wielder_rootmotiontest.tscn" id="1_whq78"]
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_sgu1q"]
 turbidity = 9.65
@@ -28,7 +28,7 @@ sky_mode = 1
 environment = SubResource("Environment_t4fvf")
 
 [node name="CharacterBody3D" parent="." instance=ExtResource("1_whq78")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.335711, -11.2157)
+transform = Transform3D(1, 0, -1.78814e-07, 0, 1, 0, 1.78814e-07, 0, 1, 0, 0.335711, -11.2157)
 
 [node name="Camera3D" type="Camera3D" parent="CharacterBody3D"]
 transform = Transform3D(-1, -1.59872e-14, -8.74228e-08, -1.38643e-08, 0.987345, 0.158589, 8.63164e-08, 0.158589, -0.987345, 0, 2.95418, -4.21959)
