@@ -5,6 +5,7 @@ var player_speed_current: float = 0.0
 @export var player_speed_walk_max: float = 6.0
 @export var player_speed_sprint_max: float = player_speed_walk_max * 2.0
 @export var player_jump_speed_modifier: float = 0.8
+@export var player_double_jump_modifier: float = 1.4
 @export var player_walk_accel_rate: float = 4.0
 @export var player_sprint_accel_rate: float = 7.0
 @export var player_decel_rate: float = 14.0
@@ -13,7 +14,7 @@ var player_speed_current: float = 0.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
-@export var root_motion_multiplier: int = 500
+@export var root_motion_multiplier: int = 30000
 
 var has_direction: bool = false
 var jumps_remaining: int = max_jumps
@@ -107,7 +108,8 @@ func _physics_process(delta: float) -> void:
 	
 	# if attacking, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
 	if movement_state == PlayerMovementState.ATTACK:
-		velocity = Vector3()
+		# might need to refactor this later
+		velocity = Vector3(0, velocity.y, 0)
 	
 	#print(movement_state)
 
@@ -169,7 +171,7 @@ func apply_jump_and_gravity(delta: float) -> void:
 		else:
 			if jumps_remaining < max_jumps:
 				jumps_remaining -= 1
-				velocity.y = jump_velocity * jump_velocity_multiplier
+				velocity.y = jump_velocity * jump_velocity_multiplier * player_double_jump_modifier
 #				
 				# start double jump oneshot
 				anim_tree.set("parameters/DoubleJumpShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
@@ -303,7 +305,9 @@ func handle_root_motion(delta: float) -> void:
 	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $starblade_wielder.rotation.y)
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-	velocity += root_motion * root_motion_multiplier
+	velocity += root_motion * root_motion_multiplier * delta
+	if not is_on_floor():
+		velocity.y -= gravity * gravity_multiplier * delta
 
 
 func rotate_cam_kb_m(event) -> void:
@@ -344,12 +348,14 @@ func handle_weapon_actions(event) -> void:
 				match attack_combo_stage:
 					1:
 						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
-						if anim_duration >= 0.2 && anim_duration <= 0.5:
+						if anim_duration >= 0.2 && anim_duration <= 0.6:
 							continue_attack_chain = true
+							vanish_timer.start(vanish_timer_duration)
 					2:
 						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
-						if anim_duration > 0.2 && anim_duration < 0.5:
+						if anim_duration > 0.15 && anim_duration < 0.55:
 							continue_attack_chain = true
+							vanish_timer.start(vanish_timer_duration)
 		# midair attacks
 		else:
 			if movement_state != PlayerMovementState.ATTACK:
@@ -365,22 +371,6 @@ func handle_weapon_actions(event) -> void:
 					2:
 						pass
 	
-
-
-func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
-	print(area.get_parent_node_3d())
-	
-	overlapping_object = area.get_parent_node_3d()
-
-
-func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
-	overlapping_object = null
-
-
-func _on_vanish_timer_timeout() -> void:
-	print("vanish")
-	current_weapon.visible = false
-
 
 # determine what happens when specific animations end.
 func _on_animation_tree_animation_finished(anim_name):
@@ -406,3 +396,17 @@ func _on_animation_tree_animation_finished(anim_name):
 		
 		# always set back to false so that future combo animations don't play automatically.
 		continue_attack_chain = false
+
+func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
+	print(area.get_parent_node_3d())
+	
+	overlapping_object = area.get_parent_node_3d()
+
+
+func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
+	overlapping_object = null
+
+
+func _on_vanish_timer_timeout() -> void:
+	print("vanish")
+	current_weapon.visible = false

@@ -1,4 +1,4 @@
-[gd_resource type="StandardMaterial3D" load_steps=3 format=3]
+[gd_resource type="StandardMaterial3D" load_steps=3 format=3 uid="uid://csxmuy21hjk3w"]
 
 [ext_resource type="Texture2D" uid="uid://c3f3qddrtyhjr" path="res://3D_models/characters/wielder1/wielder1_mats/Wielder_Body_AlbedoAO.png" id="1_224to"]
 [ext_resource type="Texture2D" uid="uid://bgiecf2k15ous" path="res://3D_models/characters/wielder1/wielder1_mats/Wielder_Body_NormalRough.png" id="2_1scfr"]
@@ -13,7 +13,7 @@ ao_enabled = true
 ao_texture = ExtResource("1_224to")
 ao_texture_channel = 3
 subsurf_scatter_enabled = true
-subsurf_scatter_strength = 1.0
+subsurf_scatter_strength = 0.5
 subsurf_scatter_skin_mode = true
 subsurf_scatter_transmittance_enabled = true
 subsurf_scatter_transmittance_depth = 0.2
