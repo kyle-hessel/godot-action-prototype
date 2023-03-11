@@ -1,0 +1,8 @@
+[gd_resource type="AnimationLibrary" load_steps=2 format=3 uid="uid://xw8jlde85fnw"]
+
+[ext_resource type="Animation" uid="uid://caei84638isnj" path="res://3D_models/characters/other/DoubleJump.res" id="1_2e4lu"]
+
+[resource]
+_data = {
+"DoubleJump": ExtResource("1_2e4lu")
+}

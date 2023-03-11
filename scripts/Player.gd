@@ -13,10 +13,13 @@ var player_speed_current: float = 0.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
+@export var root_motion_multiplier: int = 500
 
 var has_direction: bool = false
 var jumps_remaining: int = max_jumps
 var is_jumping: bool = false
+var attack_combo_stage: int = 0
+var continue_attack_chain: bool = false
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -24,6 +27,7 @@ var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_tick
 @export var gravity_multiplier: float = 1.0
 
 @onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
+@onready var anim_player: AnimationPlayer = $starblade_wielder/AnimationPlayer
 @onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/Wielder1_Sword2
@@ -32,7 +36,6 @@ var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_tick
 @export var joystick_sensitivity: float = 3.0
 
 var overlapping_object: Node3D = null
-var weapon_drawn: bool = false
 @export var vanish_timer_duration: float = 10.0
 
 enum PlayerMovementState {
@@ -51,6 +54,8 @@ func _ready():
 	
 	# capture mouse movement for camera navigation
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
+	current_weapon.visible = false
 
 	# hack fix that prevents the player from facing in the wrong direction if camera isn't moved before very first input. 
 	# might be a godot bug? check later in stable version. it's a harmless fix regardless, albeit odd that it works.
@@ -74,24 +79,35 @@ func _process(delta: float) -> void:
 # tl;dr stable delta time
 func _physics_process(delta: float) -> void:
 	
-	# gravity, then jumping, in that order
-	apply_jump_and_gravity(delta)
-
-	# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
-	calculate_player_lateral_movement(delta)
+	# if not attacking, move normally
+	if movement_state != PlayerMovementState.ATTACK:
+		# gravity, then jumping, in that order
+		apply_jump_and_gravity(delta)
+		# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
+		calculate_player_lateral_movement(delta)
+		
+	# if attacking, calculate movement w/ root motion
+	else:
+		player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+		handle_root_motion(delta)
+		apply_only_gravity(delta)
 	
 	#print(player_speed_current)
 	#print(velocity.length())
 	
-	# Camera w/ controller (should see if we can only call this if using a controller input this frame)
-	rotate_cam_joypad(delta)
-	
 	# Set the player's animation tree blending value equal to the player's current speed.
 	anim_tree.set("parameters/IdleWalkRun_Jump/IdleWalkRunBlendspace/blend_position", velocity.length())
+	
+	# Camera w/ controller (should see if we can only call this if using a controller input this frame)
+	rotate_cam_joypad(delta)
 
 	# Collisions
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
+	
+	# if attacking, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
+	if movement_state == PlayerMovementState.ATTACK:
+		velocity = Vector3()
 	
 	#print(movement_state)
 
@@ -101,24 +117,23 @@ func _input(event):
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
+	# handle what happens when the player attacks.
 	# using 'event.' instead of 'Input.' for better input event buffering.
 	handle_weapon_actions(event)
 
 
 func rotate_player(delta: float):
 	# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
-	if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
-		# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
-		$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
+	if movement_state != PlayerMovementState.ATTACK:
+		if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
+			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
+			$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
 
 
 func apply_jump_and_gravity(delta: float) -> void:
 	# Apply gravity, reset jumps
 	if not is_on_floor():
 		velocity.y -= gravity * gravity_multiplier * delta
-		
-		# check for directional switches in midair
-		var inputting_movement: bool = Input.is_action_just_released("forward") || Input.is_action_just_released("backward") || Input.is_action_just_released("left") || Input.is_action_just_released("right")
 		
 		# start fall animation (same as jump)
 		if !is_jumping:
@@ -162,6 +177,11 @@ func apply_jump_and_gravity(delta: float) -> void:
 		# start jump animation
 		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", false)
 		anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_start", true)
+
+
+func apply_only_gravity(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y -= gravity * gravity_multiplier * delta
 
 
 func calculate_player_lateral_movement(delta: float) -> void:
@@ -262,6 +282,7 @@ func smooth_accelerate(delta: float) -> void:
 func stop_player_movement(delta: float) -> void:
 		# update movement state
 		movement_state = PlayerMovementState.IDLE
+			
 		blending_movement_state = false;
 		
 		# deceleration
@@ -273,7 +294,18 @@ func stop_player_movement(delta: float) -> void:
 		else:
 			velocity = velocity.move_toward(Vector3.ZERO, player_decel_rate * delta)
 
+
+# determine how to move when applying root motion.
+func handle_root_motion(delta: float) -> void:
+	has_direction = false # ensure no added rotation lerping while attacking
+	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
+	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
+	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $starblade_wielder.rotation.y)
 	
+	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
+	velocity += root_motion * root_motion_multiplier
+
+
 func rotate_cam_kb_m(event) -> void:
 	# mouse spring arm rotation
 	if (event is InputEventMouseMotion):
@@ -298,17 +330,41 @@ func rotate_cam_joypad(delta: float) -> void:
 	
 
 func handle_weapon_actions(event) -> void:
-	if (event.is_action_pressed("attack") && weapon_drawn == false):
-		weapon_drawn = !weapon_drawn
-		current_weapon.visible = weapon_drawn
-		vanish_timer.start(vanish_timer_duration)
-	elif (event.is_action_pressed("attack") && weapon_drawn == true):
-		vanish_timer.start(vanish_timer_duration)
+	if event.is_action_pressed("attack"):
+		# grounded attacks
+		if is_on_floor():
+			# only begin first animation if not already in ATTACK state.
+			if movement_state != PlayerMovementState.ATTACK:
+				movement_state = PlayerMovementState.ATTACK
+				anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				current_weapon.visible = true
+				attack_combo_stage += 1
+			# if already attacking, determine if the attack combo is continued.
+			else:
+				match attack_combo_stage:
+					1:
+						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
+						if anim_duration >= 0.2 && anim_duration <= 0.5:
+							continue_attack_chain = true
+					2:
+						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
+						if anim_duration > 0.2 && anim_duration < 0.5:
+							continue_attack_chain = true
+		# midair attacks
+		else:
+			if movement_state != PlayerMovementState.ATTACK:
+#				movement_state = PlayerMovementState.ATTACK
+#				anim_tree.set("parameters/AttackMidairShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+#				current_weapon.visible = true
+#				attack_combo_stage += 1
+				pass
+			else:
+				match attack_combo_stage:
+					1:
+						pass
+					2:
+						pass
 	
-		
-#func handle_weapon_updates() -> void:
-#	if current_weapon != null:
-#		current_weapon.global_transform = weapon_slot_right.global_transform
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
@@ -323,5 +379,30 @@ func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_
 
 func _on_vanish_timer_timeout() -> void:
 	print("vanish")
-	weapon_drawn = !weapon_drawn
-	current_weapon.visible = weapon_drawn
+	current_weapon.visible = false
+
+
+# determine what happens when specific animations end.
+func _on_animation_tree_animation_finished(anim_name):
+	# attack animation combo chain continuation logic
+	if movement_state == PlayerMovementState.ATTACK:
+		
+		# if combo is continuing, determine which animation to play.
+		if continue_attack_chain == true:
+			
+			if anim_name == "AttackComboGround1":
+				attack_combo_stage += 1
+				anim_tree.set("parameters/AttackGroundShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				
+			elif anim_name == "AttackComboGround2":
+				attack_combo_stage += 1
+				anim_tree.set("parameters/AttackGroundShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			
+		# if combo is ending, reset player state.
+		else:
+			movement_state = PlayerMovementState.IDLE
+			attack_combo_stage = 0
+			vanish_timer.start(vanish_timer_duration)
+		
+		# always set back to false so that future combo animations don't play automatically.
+		continue_attack_chain = false
