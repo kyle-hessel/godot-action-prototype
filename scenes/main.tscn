@@ -1,9 +1,10 @@
-[gd_scene load_steps=21 format=3 uid="uid://dejwcfhb645ke"]
+[gd_scene load_steps=22 format=3 uid="uid://dejwcfhb645ke"]
 
 [ext_resource type="PackedScene" uid="uid://bueuj0ghwdj2c" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/experimental/water.tres" id="3_c4y8b"]
 [ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
+[ext_resource type="PackedScene" uid="uid://dsntrswipiq46" path="res://3D_models/characters/other/hooded_character.tscn" id="6_gpj1k"]
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jyu5b"]
@@ -187,3 +188,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="hooded_character" parent="." instance=ExtResource("6_gpj1k")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.19004, 14.1866, -2.88057)

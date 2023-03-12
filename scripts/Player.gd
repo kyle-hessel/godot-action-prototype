@@ -11,6 +11,7 @@ var player_speed_current: float = 0.0
 @export var player_decel_rate: float = 14.0
 @export var player_jump_decel_rate: float = 10.0
 @export var player_rotation_rate: float = 9.0
+@export var cam_lerp_rate: float = 6.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
@@ -27,6 +28,7 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_ticks_per_second")
 @export var gravity_multiplier: float = 1.0
 
+@onready var player_cam: Camera3D = $SpringArm3D/PlayerCam
 @onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
 @onready var anim_player: AnimationPlayer = $starblade_wielder/AnimationPlayer
 @onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
@@ -37,7 +39,7 @@ var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_tick
 @export var joystick_sensitivity: float = 3.0
 
 var overlapping_object: Node3D = null
-@export var vanish_timer_duration: float = 10.0
+@export var vanish_timer_duration: float = 15.0
 
 enum PlayerMovementState {
 	IDLE = 0,
@@ -72,8 +74,15 @@ func _process(delta: float) -> void:
 	
 	# determined in _physics_process, meaning has_direction updates at a fixed speed unlike the rest of this function.
 	# that means it could be out of sync for some frames at times. doesn't seem to cause an issue, though.
-	if has_direction:
-		rotate_player(delta)
+	if movement_state != PlayerMovementState.ATTACK:
+		# normal directional lerp to match camera rotation
+		if has_direction:
+			rotate_player_movement(delta)
+	else:
+		# combat directional lerp to face enemy when attacking
+		if overlapping_object != null:
+			if $starblade_wielder.global_position.distance_to(overlapping_object.global_position) > 1.0:
+				rotate_player_combat(delta)
 
 
 # difference from _process: https://godotengine.org/qa/57458/difference-between-_process-_physics_process-have-script
@@ -92,6 +101,11 @@ func _physics_process(delta: float) -> void:
 		player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
 		handle_root_motion(delta)
 		apply_only_gravity(delta)
+	
+	# if there is something to lock onto, smoothly lock on.
+	if overlapping_object != null:
+		look_at_lerp($SpringArm3D, overlapping_object.transform.origin, Vector3.UP, delta)
+		
 	
 	#print(player_speed_current)
 	#print(velocity.length())
@@ -124,12 +138,15 @@ func _input(event):
 	handle_weapon_actions(event)
 
 
-func rotate_player(delta: float):
+func rotate_player_movement(delta: float):
 	# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
-	if movement_state != PlayerMovementState.ATTACK:
-		if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
-			# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
-			$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
+	if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
+		# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
+		$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
+
+
+func rotate_player_combat(delta: float):
+	face_object_lerp($starblade_wielder, overlapping_object.position, Vector3.UP, delta)
 
 
 func apply_jump_and_gravity(delta: float) -> void:
@@ -312,6 +329,8 @@ func handle_root_motion(delta: float) -> void:
 
 func rotate_cam_kb_m(event) -> void:
 	# mouse spring arm rotation
+	
+	
 	if (event is InputEventMouseMotion):
 		# mouse x movement (in 2d monitor space) becomes spring arm rotation in 3D space around the Y axis - left/right rotation.
 		$SpringArm3D.rotation.y -= event.relative.x / 1000 * mouse_sensitivity
@@ -410,3 +429,67 @@ func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_
 func _on_vanish_timer_timeout() -> void:
 	print("vanish")
 	current_weapon.visible = false
+
+
+### HELPER FUNCTIONS
+# for camera
+func looking_at_gd(target: Vector3, up: Vector3) -> Basis:
+	var v_z: Vector3 = -target.normalized()
+	var v_x: Vector3 = up.cross(v_z)
+	
+	v_x.normalized()
+	var v_y: Vector3 = v_z.cross(v_x)
+	
+	var basis: Basis = Basis(v_x, v_y, v_z)
+	return basis
+	
+# for meshes, such as player
+func facing_object(target: Vector3, up: Vector3)-> Basis:
+	var v_z: Vector3 = target.normalized()
+	var v_x: Vector3 = up.cross(v_z)
+	
+	v_x.normalized()
+	var v_y: Vector3 = v_z.cross(v_x)
+	
+	var basis: Basis = Basis(v_x, v_y, v_z)
+	return basis
+	
+# generic, reimplemented from engine source
+func look_at_from_pos_gd(obj: Node3D, pos: Vector3, target: Vector3, up: Vector3) -> void:
+	var lookat: Transform3D = Transform3D(looking_at_gd(target - pos, up), pos)
+	var original_scale: Vector3 = obj.scale
+	obj.global_transform = lookat
+	obj.scale = original_scale
+	
+# generic, reimplemented from engine source
+func look_at_gd(obj: Node3D, target: Vector3, up: Vector3) -> void:
+	var origin: Vector3 = obj.global_transform.origin
+	look_at_from_pos_gd(obj, origin, target, up)
+	
+# for camera
+func look_at_from_pos_lerp(obj: Node3D, pos: Vector3, target: Vector3, up: Vector3, delta: float) -> void:
+	var lookat: Transform3D = Transform3D(looking_at_gd(target - pos, up), pos)
+	var original_scale: Vector3 = obj.scale
+	#obj.global_transform = lerp(obj.global_transform, lookat, player_rotation_rate * delta)
+	obj.global_transform = obj.global_transform.interpolate_with(lookat, cam_lerp_rate * delta)
+	#obj.global_transform = lookat
+	obj.scale = original_scale
+	
+# for meshes, such as player
+func facing_object_from_pos_lerp(obj: Node3D, pos: Vector3, target: Vector3, up: Vector3, delta: float) -> void:
+	var lookat: Transform3D = Transform3D(facing_object(target - pos, up), pos)
+	var original_scale: Vector3 = obj.scale
+	#obj.global_transform = lerp(obj.global_transform, lookat, player_rotation_rate * delta)
+	obj.global_transform = obj.global_transform.interpolate_with(lookat, player_rotation_rate * delta)
+	#obj.global_transform = lookat
+	obj.scale = original_scale
+	
+# for camera
+func look_at_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> void:
+	var origin: Vector3 = obj.global_transform.origin
+	look_at_from_pos_lerp(obj, origin, target, up, delta)
+	
+# for meshes, such as player
+func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> void:
+	var origin: Vector3 = obj.global_transform.origin
+	facing_object_from_pos_lerp(obj, origin, target, up, delta)
