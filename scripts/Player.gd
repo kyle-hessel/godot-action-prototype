@@ -15,7 +15,7 @@ var player_speed_current: float = 0.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
-@export var root_motion_multiplier: int = 30000
+@export var root_motion_multiplier: int = 15000
 
 var has_direction: bool = false
 var jumps_remaining: int = max_jumps
@@ -100,7 +100,6 @@ func _physics_process(delta: float) -> void:
 	else:
 		player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
 		handle_root_motion(delta)
-		apply_only_gravity(delta)
 	
 	# if there is something to lock onto, smoothly lock on.
 	if overlapping_object != null:
@@ -316,7 +315,7 @@ func stop_player_movement(delta: float) -> void:
 
 # determine how to move when applying root motion.
 func handle_root_motion(delta: float) -> void:
-	has_direction = false # ensure no added rotation lerping while attacking
+	has_direction = false # ensure no added rotation movement lerping while attacking
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
 	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $starblade_wielder.rotation.y)
