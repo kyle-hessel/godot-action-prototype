@@ -17,7 +17,7 @@ sky_material = SubResource("PhysicalSkyMaterial_8bey6")
 
 [sub_resource type="Environment" id="Environment_ph5ts"]
 background_mode = 2
-background_energy_multiplier = 1.5
+background_energy_multiplier = 1.4
 sky = SubResource("Sky_qvm31")
 tonemap_mode = 3
 tonemap_exposure = 0.47

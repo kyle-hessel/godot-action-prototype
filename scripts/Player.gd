@@ -77,7 +77,7 @@ func _physics_process(delta: float) -> void:
 	# calls either rotate_player_movement or rotate_player_combat
 	determine_player_rotation(delta)
 	
-	# for targeting enemies / objects
+	# for default targeting or targeting enemies / objects
 	determine_cam_lock_on(delta)
 			
 	# camera movement w/ controller (should see if we can only call this if using a controller input this frame?)
@@ -353,7 +353,6 @@ func determine_cam_lock_on(delta: float) -> void:
 				var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
 				
 				target_icon.position = Vector2(target_viewport_x, target_viewport_y)
-			
 
 
 func rotate_cam_kb_m(event) -> void:
