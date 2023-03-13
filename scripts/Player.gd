@@ -15,7 +15,7 @@ var player_speed_current: float = 0.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
-@export var root_motion_multiplier: int = 15000
+@export var root_motion_multiplier: int = 50000
 
 var has_direction: bool = false
 var jumps_remaining: int = max_jumps
@@ -25,7 +25,7 @@ var continue_attack_chain: bool = false
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_ticks_per_second")
+
 @export var gravity_multiplier: float = 1.0
 
 @onready var player_cam: Camera3D = $SpringArm3D/PlayerCam
@@ -53,8 +53,6 @@ var blending_movement_state: bool = false;
 
 
 func _ready():
-	Engine.max_fps = 144
-	
 	# capture mouse movement for camera navigation
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
@@ -70,7 +68,6 @@ func _process(delta: float) -> void:
 #	rotate_cam_joypad(delta)
 	
 	#print(Engine.get_frames_per_second())
-	#print(physics_tick)
 	
 	# determined in _physics_process, meaning has_direction updates at a fixed speed unlike the rest of this function.
 	# that means it could be out of sync for some frames at times. doesn't seem to cause an issue, though.

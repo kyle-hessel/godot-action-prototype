@@ -25,7 +25,6 @@ settings/physics_jitter_fix=0.5
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/vsync/vsync_mode=0
 window/stdout/print_fps=true
 window/run_on_separate_thread=true
 window/physics_jitter_fix=0.5
@@ -115,6 +114,8 @@ attack={
 [physics]
 
 3d/run_on_separate_thread=true
+common/physics_ticks_per_second=120
+common/max_physics_steps_per_frame=16
 3d/default_gravity=20.0
 
 [rendering]
