@@ -36,6 +36,7 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/Wielder1_Sword2
+@onready var target_icon: TextureRect = $UI/TargetingIcon
 
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 3.0
@@ -331,9 +332,25 @@ func determine_cam_lock_on(delta: float) -> void:
 	if overlapping_object != null:
 		if Input.is_action_just_pressed("target"):
 			targeting = !targeting
+			target_icon.visible = !target_icon.visible
 		
 		if targeting:
-			look_at_lerp($SpringArm3D, overlapping_object.transform.origin, Vector3.UP, delta)
+			# camera tracking
+			look_at_lerp($SpringArm3D, overlapping_object.global_transform.origin, Vector3.UP, delta)
+			
+			# target icon placement
+			if overlapping_object is Enemy:
+				var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
+				var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
+				var enemy_viewport_pos: Vector2 = player_cam.unproject_position(overlapping_object.global_transform.origin)
+				var half_height: float = overlapping_object.collision_shape.shape.height * 0.5
+				var horizontal_offset: float = 4.5
+				
+				var target_viewport_x: float = enemy_viewport_pos.x - horizontal_offset * viewport_height * 0.005
+				var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
+				
+				target_icon.position = Vector2(target_viewport_x, target_viewport_y)
+			
 
 
 func rotate_cam_kb_m(event) -> void:
@@ -431,6 +448,10 @@ func _on_overlap_area_body_shape_entered(body_rid, body, body_shape_index, local
 
 func _on_overlap_area_body_shape_exited(body_rid, body, body_shape_index, local_shape_index):
 	overlapping_object = null
+	
+	# temporary
+	targeting = false
+	target_icon.visible = false
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:

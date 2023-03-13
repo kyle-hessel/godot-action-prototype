@@ -1,6 +1,6 @@
 [gd_scene load_steps=22 format=3 uid="uid://dejwcfhb645ke"]
 
-[ext_resource type="PackedScene" uid="uid://bueuj0ghwdj2c" path="res://scenes/player.tscn" id="1_dha7o"]
+[ext_resource type="PackedScene" uid="uid://cc7svareltvw7" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_ikywk"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/experimental/water.tres" id="3_c4y8b"]
 [ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
