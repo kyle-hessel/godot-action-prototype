@@ -335,20 +335,23 @@ func determine_cam_lock_on(delta: float) -> void:
 			target_icon.visible = !target_icon.visible
 		
 		if targeting:
-			# camera tracking
-			look_at_lerp($SpringArm3D, overlapping_object.global_transform.origin, Vector3.UP, delta)
-			
-			# target icon placement
 			if overlapping_object is Enemy:
+				var half_height: float = overlapping_object.collision_shape.shape.height * 0.5
+				
+				if movement_state == PlayerMovementState.ATTACK:
+					# camera tracking
+					var look_at_pos: Vector3 = Vector3(overlapping_object.global_transform.origin.x, overlapping_object.global_transform.origin.y + half_height, overlapping_object.global_transform.origin.z)
+					look_at_lerp($SpringArm3D, look_at_pos, Vector3.UP, delta)
+				
+				# target icon placement
 				var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
 				var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
 				var enemy_viewport_pos: Vector2 = player_cam.unproject_position(overlapping_object.global_transform.origin)
-				var half_height: float = overlapping_object.collision_shape.shape.height * 0.5
 				var horizontal_offset: float = 4.5
-				
+					
 				var target_viewport_x: float = enemy_viewport_pos.x - horizontal_offset * viewport_height * 0.005
 				var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
-				
+					
 				target_icon.position = Vector2(target_viewport_x, target_viewport_y)
 			
 
