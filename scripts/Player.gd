@@ -1,5 +1,6 @@
 extends CharacterBody3D
 
+class_name Player
 
 var player_speed_current: float = 0.0
 @export var player_speed_walk_max: float = 6.0
@@ -22,6 +23,7 @@ var jumps_remaining: int = max_jumps
 var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
+var targeting: bool = false
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -58,74 +60,47 @@ func _ready():
 	
 	current_weapon.visible = false
 
-	# hack fix that prevents the player from facing in the wrong direction if camera isn't moved before very first input. 
-	# might be a godot bug? check later in stable version. it's a harmless fix regardless, albeit odd that it works.
-	#$SpringArm3D.rotation.y += 0.001
-
 
 # fluctuating framerate-based delta time
 func _process(delta: float) -> void:
-#	rotate_cam_joypad(delta)
-	
 	#print(Engine.get_frames_per_second())
-	
-	# determined in _physics_process, meaning has_direction updates at a fixed speed unlike the rest of this function.
-	# that means it could be out of sync for some frames at times. doesn't seem to cause an issue, though.
-	if movement_state != PlayerMovementState.ATTACK:
-		# normal directional lerp to match camera rotation
-		if has_direction:
-			rotate_player_movement(delta)
-	else:
-		# combat directional lerp to face enemy when attacking
-		if overlapping_object != null:
-			if $starblade_wielder.global_position.distance_to(overlapping_object.global_position) > 1.0:
-				rotate_player_combat(delta)
+	pass
 
 
 # difference from _process: https://godotengine.org/qa/57458/difference-between-_process-_physics_process-have-script
 # tl;dr stable delta time
 func _physics_process(delta: float) -> void:
+	# movement + state blending, jumping & gravity, root motion, etc.
+	determine_player_movement_state(delta)
 	
-	# if not attacking, move normally
-	if movement_state != PlayerMovementState.ATTACK:
-		# gravity, then jumping, in that order
-		apply_jump_and_gravity(delta)
-		# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
-		calculate_player_lateral_movement(delta)
-		
-	# if attacking, calculate movement w/ root motion
-	else:
-		player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
-		handle_root_motion(delta)
+	# calls either rotate_player_movement or rotate_player_combat
+	determine_player_rotation(delta)
 	
-	# if there is something to lock onto, smoothly lock on.
-	if overlapping_object != null:
-		look_at_lerp($SpringArm3D, overlapping_object.transform.origin, Vector3.UP, delta)
-		
-	
-	#print(player_speed_current)
-	#print(velocity.length())
+	# for targeting enemies / objects
+	determine_cam_lock_on(delta)
+			
+	# camera movement w/ controller (should see if we can only call this if using a controller input this frame?)
+	rotate_cam_joypad(delta)
 	
 	# Set the player's animation tree blending value equal to the player's current speed.
 	anim_tree.set("parameters/IdleWalkRun_Jump/IdleWalkRunBlendspace/blend_position", velocity.length())
-	
-	# Camera w/ controller (should see if we can only call this if using a controller input this frame)
-	rotate_cam_joypad(delta)
 
 	# Collisions
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
 	
 	# if attacking, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
+	# this might need modification if root motion is used outside of combat later
 	if movement_state == PlayerMovementState.ATTACK:
-		# might need to refactor this later
 		velocity = Vector3(0, velocity.y, 0)
 	
+	#print(player_speed_current)
+	#print(velocity.length())
 	#print(movement_state)
 
 
 func _input(event):
-	# Camera w/ mouse (should see if we can only call this if using a keyboard input this frame)
+	# camera movement w/ mouse (should see if we can only call this if using a keyboard input this frame?)
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
@@ -133,15 +108,28 @@ func _input(event):
 	# using 'event.' instead of 'Input.' for better input event buffering.
 	handle_weapon_actions(event)
 
+# determine if player rotates relative to the camera or relative to an enemy or object.
+func determine_player_rotation(delta: float) -> void:
+	if movement_state != PlayerMovementState.ATTACK:
+		# normal directional lerp to match camera rotation
+		if has_direction:
+			rotate_player_movement(delta)
+	else:
+		# combat directional lerp to face enemy when attacking
+		if overlapping_object != null && targeting:
+			# only rotate to match enemy if not extremely close to them
+			if $starblade_wielder.global_position.distance_to(overlapping_object.global_position) > 1.0:
+				rotate_player_combat(delta)
 
-func rotate_player_movement(delta: float):
+
+func rotate_player_movement(delta: float) -> void:
 	# player mesh rotation relative to camera. note: the entire Player never rotates: only the spring arm or the mesh.
 	if $starblade_wielder.rotation.y != $SpringArm3D.rotation.y:
 		# rotate the player's mesh instead of the entire Player; rotating that will move the camera, too.
 		$starblade_wielder.rotation.y = lerp_angle($starblade_wielder.rotation.y, atan2(velocity.x, velocity.z), player_rotation_rate * delta)
 
 
-func rotate_player_combat(delta: float):
+func rotate_player_combat(delta: float) -> void:
 	face_object_lerp($starblade_wielder, overlapping_object.position, Vector3.UP, delta)
 
 
@@ -199,8 +187,21 @@ func apply_only_gravity(delta: float) -> void:
 		velocity.y -= gravity * gravity_multiplier * delta
 
 
+func determine_player_movement_state(delta: float) -> void:
+	# if not attacking, move normally
+	if movement_state != PlayerMovementState.ATTACK:
+		# gravity, then jumping, in that order
+		apply_jump_and_gravity(delta)
+		# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
+		calculate_player_lateral_movement(delta)
+		
+	# if attacking, calculate movement w/ root motion
+	else:
+		player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+		handle_root_motion(delta)
+
+
 func calculate_player_lateral_movement(delta: float) -> void:
-	
 	# Get the input direction.
 	var input_dir := Input.get_vector("left", "right", "forward", "backward")
 	
@@ -229,6 +230,7 @@ func calculate_player_lateral_movement(delta: float) -> void:
 		if inputting_movement:
 			calculate_player_movement_state(delta)
 
+
 		apply_player_lateral_movement(direction)
 		
 	
@@ -250,11 +252,11 @@ func apply_player_lateral_movement(dir: Vector3, modifier: float = 1.0) -> void:
 
 func calculate_player_movement_state(delta: float) -> void:
 	# determine movement state (sprinting or walking)
-	if (Input.is_action_pressed("sprint")):
+	if Input.is_action_pressed("sprint"):
 		movement_state = PlayerMovementState.SPRINT
 	
 	# deceleration from sprint -> walk
-	elif (Input.is_action_just_released("sprint")):
+	elif Input.is_action_just_released("sprint"):
 		blending_movement_state = true;
 	else:
 		if blending_movement_state:
@@ -319,14 +321,23 @@ func handle_root_motion(delta: float) -> void:
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
 	velocity += root_motion * root_motion_multiplier * delta
-	if not is_on_floor():
-		velocity.y -= gravity * gravity_multiplier * delta
+	
+	# still add gravity if not on floor
+	apply_only_gravity(delta)
+
+
+func determine_cam_lock_on(delta: float) -> void:
+	# if there is something to lock onto, smoothly lock on if the player targets.
+	if overlapping_object != null:
+		if Input.is_action_just_pressed("target"):
+			targeting = !targeting
+		
+		if targeting:
+			look_at_lerp($SpringArm3D, overlapping_object.transform.origin, Vector3.UP, delta)
 
 
 func rotate_cam_kb_m(event) -> void:
 	# mouse spring arm rotation
-	
-	
 	if (event is InputEventMouseMotion):
 		# mouse x movement (in 2d monitor space) becomes spring arm rotation in 3D space around the Y axis - left/right rotation.
 		$SpringArm3D.rotation.y -= event.relative.x / 1000 * mouse_sensitivity
@@ -336,7 +347,7 @@ func rotate_cam_kb_m(event) -> void:
 		
 		# debug
 		#print($SpringArm3D.rotation.x)
-		
+	
 
 func rotate_cam_joypad(delta: float) -> void:
 	# controller spring arm rotation
@@ -412,6 +423,7 @@ func _on_animation_tree_animation_finished(anim_name):
 		# always set back to false so that future combo animations don't play automatically.
 		continue_attack_chain = false
 
+
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
 	print(area.get_parent_node_3d())
 	
@@ -428,7 +440,7 @@ func _on_vanish_timer_timeout() -> void:
 
 
 ### HELPER FUNCTIONS
-# for camera
+# generic, reimplemented from engine source
 func looking_at_gd(target: Vector3, up: Vector3) -> Basis:
 	var v_z: Vector3 = -target.normalized()
 	var v_x: Vector3 = up.cross(v_z)
@@ -439,7 +451,7 @@ func looking_at_gd(target: Vector3, up: Vector3) -> Basis:
 	var basis: Basis = Basis(v_x, v_y, v_z)
 	return basis
 	
-# for meshes, such as player
+# for meshes, such as player (minor modification of looking_at)
 func facing_object(target: Vector3, up: Vector3)-> Basis:
 	var v_z: Vector3 = target.normalized()
 	var v_x: Vector3 = up.cross(v_z)
@@ -462,7 +474,7 @@ func look_at_gd(obj: Node3D, target: Vector3, up: Vector3) -> void:
 	var origin: Vector3 = obj.global_transform.origin
 	look_at_from_pos_gd(obj, origin, target, up)
 	
-# for camera
+# for camera (adds lerp to default look_at_from_position)
 func look_at_from_pos_lerp(obj: Node3D, pos: Vector3, target: Vector3, up: Vector3, delta: float) -> void:
 	var lookat: Transform3D = Transform3D(looking_at_gd(target - pos, up), pos)
 	var original_scale: Vector3 = obj.scale
@@ -471,7 +483,7 @@ func look_at_from_pos_lerp(obj: Node3D, pos: Vector3, target: Vector3, up: Vecto
 	#obj.global_transform = lookat
 	obj.scale = original_scale
 	
-# for meshes, such as player
+# for meshes, such as player (minor modification of looking_at_from_position)
 func facing_object_from_pos_lerp(obj: Node3D, pos: Vector3, target: Vector3, up: Vector3, delta: float) -> void:
 	var lookat: Transform3D = Transform3D(facing_object(target - pos, up), pos)
 	var original_scale: Vector3 = obj.scale
@@ -479,13 +491,13 @@ func facing_object_from_pos_lerp(obj: Node3D, pos: Vector3, target: Vector3, up:
 	obj.global_transform = obj.global_transform.interpolate_with(lookat, player_rotation_rate * delta)
 	#obj.global_transform = lookat
 	obj.scale = original_scale
-	
-# for camera
+
+# for camera (adds lerp to default look_at)
 func look_at_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> void:
 	var origin: Vector3 = obj.global_transform.origin
 	look_at_from_pos_lerp(obj, origin, target, up, delta)
 	
-# for meshes, such as player
+# for meshes, such as player (minor modification of look_at)
 func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> void:
 	var origin: Vector3 = obj.global_transform.origin
 	facing_object_from_pos_lerp(obj, origin, target, up, delta)
