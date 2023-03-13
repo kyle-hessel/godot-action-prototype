@@ -348,10 +348,10 @@ func determine_cam_lock_on(delta: float) -> void:
 				var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
 				var enemy_viewport_pos: Vector2 = player_cam.unproject_position(overlapping_object.global_transform.origin)
 				var horizontal_offset: float = 4.5
-					
+				
 				var target_viewport_x: float = enemy_viewport_pos.x - horizontal_offset * viewport_height * 0.005
 				var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
-					
+				
 				target_icon.position = Vector2(target_viewport_x, target_viewport_y)
 			
 
