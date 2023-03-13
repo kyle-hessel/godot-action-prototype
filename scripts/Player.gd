@@ -424,14 +424,24 @@ func _on_animation_tree_animation_finished(anim_name):
 		continue_attack_chain = false
 
 
+func _on_overlap_area_body_shape_entered(body_rid, body, body_shape_index, local_shape_index):
+	print(body)
+	overlapping_object = body
+
+
+func _on_overlap_area_body_shape_exited(body_rid, body, body_shape_index, local_shape_index):
+	overlapping_object = null
+
+
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
-	print(area.get_parent_node_3d())
-	
-	overlapping_object = area.get_parent_node_3d()
+	#print(area.get_parent_node_3d())
+	#overlapping_object = area.get_parent_node_3d()
+	pass
 
 
 func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
-	overlapping_object = null
+	#overlapping_object = null
+	pass
 
 
 func _on_vanish_timer_timeout() -> void:
@@ -501,3 +511,4 @@ func look_at_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> vo
 func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> void:
 	var origin: Vector3 = obj.global_transform.origin
 	facing_object_from_pos_lerp(obj, origin, target, up, delta)
+
