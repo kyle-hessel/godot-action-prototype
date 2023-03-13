@@ -132,6 +132,9 @@ func rotate_player_movement(delta: float) -> void:
 
 func rotate_player_combat(delta: float) -> void:
 	face_object_lerp($starblade_wielder, overlapping_object.position, Vector3.UP, delta)
+	# zero out X and Z rotations so that the player can't rotate in odd ways and get stuck there.
+	$starblade_wielder.rotation.x = 0.0;
+	$starblade_wielder.rotation.z = 0.0;
 
 
 func apply_jump_and_gravity(delta: float) -> void:
