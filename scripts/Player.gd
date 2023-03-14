@@ -32,7 +32,6 @@ var tracking: bool = false
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-
 @export var gravity_multiplier: float = 1.0
 
 @onready var player_cam: Camera3D = $SpringArm3D/PlayerCam
@@ -345,22 +344,41 @@ func handle_root_motion(delta: float) -> void:
 	apply_only_gravity(delta)
 
 
-func determine_cam_lock_on(delta: float) -> void:
-	
+func determine_target() -> void:
 	if !overlapping_objects.is_empty():
 		if Input.is_action_just_pressed("target"):
 				# if we have overlapping objects, toggle targeting
 				targeting = !targeting
 				target_icon.visible = !target_icon.visible
 				
-				# if true, find nearest object to target.
+				# if targeting, find nearest object to target.
 				if targeting:
 					sort_objects_by_distance()
-					targeted_object = overlapping_objects[0]
+					
+					# extra checks to ensure object is fit for targeting (visibility, mostly)
+					for object in overlapping_objects:
+						var half_height: float = object.collision_shape.shape.height * 0.5
+						var target_pos: Vector3 = Vector3(object.position.x, object.position.y + half_height, object.position.z)
+						
+						# if object is fit for targeting, target it and break out of loop.
+						if player_cam.is_position_in_frustum(target_pos):
+							targeted_object = object
+							break
+					
+					# if no object met requirements, set targeting back to false.
+					if targeted_object == null:
+						targeting = false
+						target_icon.visible = false
+				
 				# if false, clear.
 				else:
 					targeted_object = null
 					tracking = false
+
+
+func determine_cam_lock_on(delta: float) -> void:
+	# figure out current target if there is one, so that we know what to lock onto.
+	determine_target()
 	
 	# if there is something to lock onto, smoothly lock on if the player targets.
 	if targeted_object != null:
@@ -535,7 +553,6 @@ func _on_overlap_area_body_shape_exited(body_rid, body, body_shape_index, local_
 	
 	# if there's no more overlapping objects, drop targeting.
 	if overlapping_objects.is_empty():
-		print(overlapping_objects.is_empty())
 		targeting = false
 		target_icon.visible = false
 		targeted_object = null
