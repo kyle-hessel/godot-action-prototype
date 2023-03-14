@@ -191,3 +191,9 @@ grow_vertical = 2
 
 [node name="hooded_character" parent="." instance=ExtResource("6_gpj1k")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.7521, 14.1866, 2.86525)
+
+[node name="hooded_character2" parent="." instance=ExtResource("6_gpj1k")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.313, 14.1866, 2.86525)
+
+[node name="hooded_character3" parent="." instance=ExtResource("6_gpj1k")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.8077, 14.1866, 11.5165)

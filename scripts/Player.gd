@@ -16,6 +16,7 @@ var player_speed_current: float = 0.0
 @export var target_cam_bias_additive: float = 0.4
 var target_cam_bias: float = target_cam_bias_default
 @export var cam_lerp_rate: float = 5.0
+@export var tracking_range: float = 6.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
@@ -45,7 +46,8 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 3.0
 
-var overlapping_object: Node3D = null
+var overlapping_objects: Array[Node3D]
+var targeted_object: Node3D = null
 @export var vanish_timer_duration: float = 15.0
 
 enum PlayerMovementState {
@@ -127,9 +129,9 @@ func determine_player_rotation(delta: float) -> void:
 			rotate_player_movement(delta)
 	else:
 		# combat directional lerp to face enemy when attacking
-		if overlapping_object != null && targeting:
+		if targeted_object != null && targeting:
 			# only rotate to match enemy if not extremely close to them
-			if $starblade_wielder.global_position.distance_to(overlapping_object.global_position) > 1.0:
+			if $starblade_wielder.global_position.distance_to(targeted_object.global_position) > 1.0:
 				rotate_player_combat(delta)
 
 
@@ -141,7 +143,7 @@ func rotate_player_movement(delta: float) -> void:
 
 
 func rotate_player_combat(delta: float) -> void:
-	face_object_lerp($starblade_wielder, overlapping_object.position, Vector3.UP, delta)
+	face_object_lerp($starblade_wielder, targeted_object.position, Vector3.UP, delta)
 	# zero out X and Z rotations so that the player can't rotate in odd ways and get stuck there.
 	$starblade_wielder.rotation.x = 0.0;
 	$starblade_wielder.rotation.z = 0.0;
@@ -345,16 +347,28 @@ func handle_root_motion(delta: float) -> void:
 
 func determine_cam_lock_on(delta: float) -> void:
 	
-	# if there is something to lock onto, smoothly lock on if the player targets.
-	if overlapping_object != null:
+	if !overlapping_objects.is_empty():
 		if Input.is_action_just_pressed("target"):
-			targeting = !targeting
-			target_icon.visible = !target_icon.visible
-		
+				# if we have overlapping objects, toggle targeting
+				targeting = !targeting
+				target_icon.visible = !target_icon.visible
+				
+				# if true, find nearest object to target.
+				if targeting:
+					sort_objects_by_distance()
+					targeted_object = overlapping_objects[0]
+				# if false, clear.
+				else:
+					targeted_object = null
+					tracking = false
+	
+	# if there is something to lock onto, smoothly lock on if the player targets.
+	if targeted_object != null:
 		if targeting:
-			var half_height: float = overlapping_object.collision_shape.shape.height * 0.5
+			var half_height: float = targeted_object.collision_shape.shape.height * 0.5
 			
-			if overlapping_object is Enemy && $starblade_wielder.global_position.distance_to(overlapping_object.global_position) < 6.0:
+			# if close enough, make the camera loosely track the enemy if already targeting.
+			if targeted_object is Enemy && $starblade_wielder.global_position.distance_to(targeted_object.global_position) < tracking_range:
 				
 				# calculate the camera's bias to position itself closer to either the player or target when targeting.
 				if movement_state == PlayerMovementState.ATTACK:
@@ -364,7 +378,7 @@ func determine_cam_lock_on(delta: float) -> void:
 						target_cam_bias = target_cam_bias_default + target_cam_bias_additive
 						
 					# camera tracking w/ direct lock-on
-					#var look_at_pos: Vector3 = Vector3(overlapping_object.global_transform.origin.x, overlapping_object.global_transform.origin.y + half_height, overlapping_object.global_transform.origin.z)
+					#var look_at_pos: Vector3 = Vector3(targeted_object.global_transform.origin.x, targeted_object.global_transform.origin.y + half_height, targeted_object.global_transform.origin.z)
 					#look_at_lerp($SpringArm3D, look_at_pos, Vector3.UP, delta)
 				else:
 					if target_cam_bias > target_cam_bias_default:
@@ -375,10 +389,10 @@ func determine_cam_lock_on(delta: float) -> void:
 				#print(target_cam_bias)
 				
 				# purposely placed after the above - determine exact tracking position of the camera when targeting.
-				var tracking_pos: Vector3 = -($starblade_wielder.global_position - overlapping_object.global_position) * target_cam_bias
+				var tracking_pos: Vector3 = -($starblade_wielder.global_position - targeted_object.global_position) * target_cam_bias
 				
 				# loose enemy tracking using the above calculations
-				$SpringArm3D.position = lerp($SpringArm3D.position, tracking_pos, cam_lerp_rate * delta)
+				$SpringArm3D.position = lerp($SpringArm3D.position, tracking_pos, cam_lerp_rate * 0.8 * delta)
 				
 				tracking = true
 			else:
@@ -387,7 +401,7 @@ func determine_cam_lock_on(delta: float) -> void:
 			# target icon placement
 			var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
 			var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
-			var enemy_viewport_pos: Vector2 = player_cam.unproject_position(overlapping_object.global_transform.origin)
+			var enemy_viewport_pos: Vector2 = player_cam.unproject_position(targeted_object.global_transform.origin)
 			var horizontal_offset: float = 4.5
 				
 			var target_viewport_x: float = enemy_viewport_pos.x - horizontal_offset * viewport_height * 0.005
@@ -395,7 +409,7 @@ func determine_cam_lock_on(delta: float) -> void:
 				
 			target_icon.position = Vector2(target_viewport_x, target_viewport_y)
 				
-	# if not targeting anything, follow the player. this is only a lerp to transition smoothly out of targeting state.
+	# if not tracking anything, follow the player. this is only a lerp to transition smoothly out of targeting state.
 	if !tracking:
 		# if the player is jumping, lerp to another target pole for smooth vertical camera movement.
 		if not is_on_floor():
@@ -467,6 +481,13 @@ func handle_weapon_actions(event) -> void:
 						pass
 	
 
+# organize array of overlapping objects by distance, closest to farthest.
+func sort_objects_by_distance() -> void:
+	# makes use of a custom sorting lambda function to compare distances between points and the player, and sort lowest to highest!
+	if overlapping_objects.size() > 1:
+		overlapping_objects.sort_custom(func(a, b): return a.global_position.distance_squared_to($starblade_wielder.global_position) < b.global_position.distance_squared_to($starblade_wielder.global_position))
+
+
 # determine what happens when specific animations end.
 func _on_animation_tree_animation_finished(anim_name):
 	# attack animation combo chain continuation logic
@@ -494,21 +515,36 @@ func _on_animation_tree_animation_finished(anim_name):
 
 
 func _on_overlap_area_body_shape_entered(body_rid, body, body_shape_index, local_shape_index):
-	#print(body)
-	overlapping_object = body
-	
-	# auto-targeting when in range of first nearby enemy
-	if !targeting:
+	# if this is the first overlapping object, auto-target it (make this a setting later to decide if this is default behavior).
+	if overlapping_objects.is_empty():
+		overlapping_objects.push_back(body)
+		targeted_object = body
+		
 		targeting = true
-		$UI/TargetingIcon.visible = true
+		target_icon.visible = true
+	# if we already have other overlapping objects, just add it to the array.
+	else:
+		overlapping_objects.push_back(body)
+	
+	print(overlapping_objects)
 
 
 func _on_overlap_area_body_shape_exited(body_rid, body, body_shape_index, local_shape_index):
-	overlapping_object = null
+	# remove any body that leaves.
+	overlapping_objects.erase(body)
 	
-	# temporary
-	targeting = false
-	target_icon.visible = false
+	# if there's no more overlapping objects, drop targeting.
+	if overlapping_objects.is_empty():
+		print(overlapping_objects.is_empty())
+		targeting = false
+		target_icon.visible = false
+		targeted_object = null
+	# if there's remaining overlapping objects, find the new nearest target and target it (make this a setting later to decide if this is default behavior).
+	else:
+		sort_objects_by_distance()
+		targeted_object = overlapping_objects[0]
+		
+	print(overlapping_objects)
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
