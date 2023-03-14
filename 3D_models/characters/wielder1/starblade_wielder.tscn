@@ -214,7 +214,7 @@ surface_material_override/0 = ExtResource("3_wvftq")
 surface_material_override/0 = ExtResource("4_6nbw0")
 
 [node name="LeftHandAttachment" type="BoneAttachment3D" parent="Armature/Skeleton3D" index="3"]
-transform = Transform3D(-0.231044, 0.213329, 0.949268, 0.0251173, -0.974033, 0.225008, 0.972619, 0.0758298, 0.219687, 0.27163, 0.932831, -0.0309659)
+transform = Transform3D(-0.231045, 0.213328, 0.949268, 0.0251184, -0.974033, 0.225008, 0.972619, 0.0758308, 0.219687, 0.27163, 0.932831, -0.0309661)
 bone_name = "def_palm.L"
 bone_idx = 65
 

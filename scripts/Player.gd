@@ -12,7 +12,10 @@ var player_speed_current: float = 0.0
 @export var player_decel_rate: float = 14.0
 @export var player_jump_decel_rate: float = 10.0
 @export var player_rotation_rate: float = 9.0
-@export var cam_lerp_rate: float = 6.0
+@export var target_cam_bias_default: float = 0.3
+@export var target_cam_bias_additive: float = 0.4
+var target_cam_bias: float = target_cam_bias_default
+@export var cam_lerp_rate: float = 5.0
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
@@ -37,6 +40,8 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/Wielder1_Sword2
 @onready var target_icon: TextureRect = $UI/TargetingIcon
+var spring_arm_default_scene := preload("res://scenes/spring_arm_default.tscn")
+var spring_arm_default_pos: Node3D
 
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 3.0
@@ -48,11 +53,20 @@ enum PlayerMovementState {
 	IDLE = 0,
 	WALK = 1,
 	SPRINT = 2,
-	ATTACK = 3
+	ROLL = 3,
+	ATTACK = 4
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
 var blending_movement_state: bool = false;
+
+func _enter_tree():
+	# create default spring arm position Node3D that the real spring arm will track.
+	spring_arm_default_pos = spring_arm_default_scene.instantiate()
+	#get_tree().current_scene.add_child(spring_arm_default_pos)
+	get_tree().current_scene.call_deferred("add_child", spring_arm_default_pos)
+	print(get_tree().current_scene)
+	#get_tree().current_scene.move_child(spring_arm_default_pos, 0)
 
 
 func _ready():
@@ -60,11 +74,14 @@ func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
 	current_weapon.visible = false
+	
 
 
 # fluctuating framerate-based delta time
 func _process(delta: float) -> void:
 	#print(Engine.get_frames_per_second())
+	#print(spring_arm_default_pos.position)
+	get_tree().current_scene.print_orphan_nodes()
 	pass
 
 
@@ -89,6 +106,9 @@ func _physics_process(delta: float) -> void:
 	# Collisions
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
+	
+	# for visual debug
+	$SpringArmVisualizer.position = $SpringArm3D.position
 	
 	# if attacking, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
 	# this might need modification if root motion is used outside of combat later
@@ -331,6 +351,10 @@ func handle_root_motion(delta: float) -> void:
 
 
 func determine_cam_lock_on(delta: float) -> void:
+	
+	# the intermediary spring arm targeting point that isn't parented to the player lazy tracks the player's SpringArmTarget.
+	spring_arm_default_pos.global_position = lerp(spring_arm_default_pos.global_position, $SpringArmTarget.global_position, cam_lerp_rate * delta)
+	
 	# if there is something to lock onto, smoothly lock on if the player targets.
 	if overlapping_object != null:
 		if Input.is_action_just_pressed("target"):
@@ -341,10 +365,29 @@ func determine_cam_lock_on(delta: float) -> void:
 			if overlapping_object is Enemy:
 				var half_height: float = overlapping_object.collision_shape.shape.height * 0.5
 				
+				# calculate the camera's bias to position itself closer to either the player or target when targeting.
 				if movement_state == PlayerMovementState.ATTACK:
-					# camera tracking
-					var look_at_pos: Vector3 = Vector3(overlapping_object.global_transform.origin.x, overlapping_object.global_transform.origin.y + half_height, overlapping_object.global_transform.origin.z)
-					look_at_lerp($SpringArm3D, look_at_pos, Vector3.UP, delta)
+					if target_cam_bias < target_cam_bias_default + target_cam_bias_additive:
+						target_cam_bias += 0.0025
+					else:
+						target_cam_bias = target_cam_bias_default + target_cam_bias_additive
+						
+					# camera tracking w/ direct lock-on
+					#var look_at_pos: Vector3 = Vector3(overlapping_object.global_transform.origin.x, overlapping_object.global_transform.origin.y + half_height, overlapping_object.global_transform.origin.z)
+					#look_at_lerp($SpringArm3D, look_at_pos, Vector3.UP, delta)
+				else:
+					if target_cam_bias > target_cam_bias_default:
+						target_cam_bias -= 0.0025
+					else:
+						target_cam_bias = target_cam_bias_default
+						
+				#print(target_cam_bias)
+				
+				# purposely placed after the above - determine exact tracking position of the camera when targeting.
+				var tracking_pos: Vector3 = -($starblade_wielder.global_position - overlapping_object.global_position) * target_cam_bias
+				
+				# loose enemy tracking using the above calculations
+				$SpringArm3D.position = lerp($SpringArm3D.position, tracking_pos, cam_lerp_rate * delta)
 				
 				# target icon placement
 				var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
@@ -356,6 +399,16 @@ func determine_cam_lock_on(delta: float) -> void:
 				var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
 				
 				target_icon.position = Vector2(target_viewport_x, target_viewport_y)
+				
+	# if not targeting anything, follow the player.
+	if !targeting:
+		# lazy track the intermediary spring arm targeting point, only on the Z, for smooth up/down camera movement.
+		#$SpringArm3D.global_position = spring_arm_default_pos.global_position
+		#$SpringArm3D.global_position.x = $SpringArmTarget.global_position.x
+		#$SpringArm3D.global_position.z = $SpringArmTarget.global_position.z
+		
+		# no lerping on player movement - essentially parented
+		$SpringArm3D.position = lerp($SpringArm3D.position, $SpringArmTarget.position, cam_lerp_rate * delta)
 
 
 func rotate_cam_kb_m(event) -> void:
@@ -447,7 +500,7 @@ func _on_animation_tree_animation_finished(anim_name):
 
 
 func _on_overlap_area_body_shape_entered(body_rid, body, body_shape_index, local_shape_index):
-	print(body)
+	#print(body)
 	overlapping_object = body
 
 

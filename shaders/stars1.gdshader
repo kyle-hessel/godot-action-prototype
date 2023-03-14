@@ -20,6 +20,7 @@ void fragment() {
 	float color = 0.0;
 	float star_value = rand(pos);
 	
+	// big stars
 	if (star_value > prob)
 	{
 		vec2 center = size * pos + vec2(size, size) * 0.5;
@@ -27,6 +28,7 @@ void fragment() {
 		color = 1.0 - distance(FRAGCOORD.xy, center) / (0.5 * size);
 		color = color * t / (abs(FRAGCOORD.y - center.y)) * t / (abs(FRAGCOORD.x - center.x));
 	}
+	// tiny stars
 	else if (rand(SCREEN_UV.xy / 20.0) > 0.996)
 	{
 		float r = rand(SCREEN_UV.xy);
