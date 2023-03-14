@@ -346,6 +346,7 @@ func handle_root_motion(delta: float) -> void:
 
 func determine_target() -> void:
 	if !overlapping_objects.is_empty():
+		# toggling targeting on and off
 		if Input.is_action_just_pressed("target"):
 				# if we have overlapping objects, toggle targeting
 				targeting = !targeting
@@ -356,14 +357,7 @@ func determine_target() -> void:
 					sort_objects_by_distance()
 					
 					# extra checks to ensure object is fit for targeting (visibility, mostly)
-					for object in overlapping_objects:
-						var half_height: float = object.collision_shape.shape.height * 0.5
-						var target_pos: Vector3 = Vector3(object.position.x, object.position.y + half_height, object.position.z)
-						
-						# if object is fit for targeting, target it and break out of loop.
-						if player_cam.is_position_in_frustum(target_pos):
-							targeted_object = object
-							break
+					targeted_object = object_visibility_check()
 					
 					# if no object met requirements, set targeting back to false.
 					if targeted_object == null:
@@ -374,6 +368,28 @@ func determine_target() -> void:
 				else:
 					targeted_object = null
 					tracking = false
+					
+		# move target backwards
+		if Input.is_action_just_pressed("toggle_target_left"):
+			pass
+			
+		# move target forwards
+		if Input.is_action_just_pressed("toggle_target_right"):
+			pass
+
+
+# returns the first valid candidate for targeting if visiblity checks pass, if there is one.
+func object_visibility_check() -> Node3D:
+	for object in overlapping_objects:
+		var half_height: float = object.collision_shape.shape.height * 0.5
+		var target_pos: Vector3 = Vector3(object.position.x, object.position.y + half_height, object.position.z)
+		
+		# if object is fit for targeting, return said object
+		if player_cam.is_position_in_frustum(target_pos):
+			return object
+			
+	# if whole loop completes without a candidate, return null
+	return null
 
 
 func determine_cam_lock_on(delta: float) -> void:
