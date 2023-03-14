@@ -27,6 +27,7 @@ var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
 var targeting: bool = false
+var tracking: bool = false
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -351,8 +352,9 @@ func determine_cam_lock_on(delta: float) -> void:
 			target_icon.visible = !target_icon.visible
 		
 		if targeting:
-			if overlapping_object is Enemy:
-				var half_height: float = overlapping_object.collision_shape.shape.height * 0.5
+			var half_height: float = overlapping_object.collision_shape.shape.height * 0.5
+			
+			if overlapping_object is Enemy && $starblade_wielder.global_position.distance_to(overlapping_object.global_position) < 6.0:
 				
 				# calculate the camera's bias to position itself closer to either the player or target when targeting.
 				if movement_state == PlayerMovementState.ATTACK:
@@ -378,19 +380,23 @@ func determine_cam_lock_on(delta: float) -> void:
 				# loose enemy tracking using the above calculations
 				$SpringArm3D.position = lerp($SpringArm3D.position, tracking_pos, cam_lerp_rate * delta)
 				
-				# target icon placement
-				var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
-				var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
-				var enemy_viewport_pos: Vector2 = player_cam.unproject_position(overlapping_object.global_transform.origin)
-				var horizontal_offset: float = 4.5
+				tracking = true
+			else:
+				tracking = false
 				
-				var target_viewport_x: float = enemy_viewport_pos.x - horizontal_offset * viewport_height * 0.005
-				var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
+			# target icon placement
+			var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
+			var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
+			var enemy_viewport_pos: Vector2 = player_cam.unproject_position(overlapping_object.global_transform.origin)
+			var horizontal_offset: float = 4.5
 				
-				target_icon.position = Vector2(target_viewport_x, target_viewport_y)
+			var target_viewport_x: float = enemy_viewport_pos.x - horizontal_offset * viewport_height * 0.005
+			var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
+				
+			target_icon.position = Vector2(target_viewport_x, target_viewport_y)
 				
 	# if not targeting anything, follow the player. this is only a lerp to transition smoothly out of targeting state.
-	if !targeting:
+	if !tracking:
 		# if the player is jumping, lerp to another target pole for smooth vertical camera movement.
 		if not is_on_floor():
 			$SpringArm3D.position = lerp($SpringArm3D.position, $SpringArmJumpTarget.position, cam_lerp_rate * delta)

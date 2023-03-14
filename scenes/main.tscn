@@ -112,7 +112,7 @@ size = Vector3(40.4731, 0.0906145, 44.8961)
 material = SubResource("StandardMaterial3D_jyu5b")
 
 [node name="Player" parent="." instance=ExtResource("1_dha7o")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15.2297, -4.77532)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.676531, 15.2297, -5.8023)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_ph5ts")
@@ -190,4 +190,4 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="hooded_character" parent="." instance=ExtResource("6_gpj1k")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.19004, 14.1866, -2.88057)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.7521, 14.1866, 2.86525)
