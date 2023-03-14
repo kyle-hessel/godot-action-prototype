@@ -319,8 +319,11 @@ func stop_player_movement(delta: float) -> void:
 		player_speed_current = 0
 		
 		if is_jumping:
-			velocity.x = move_toward(velocity.x, 0, player_jump_decel_rate * delta)
-			velocity.z = move_toward(velocity.z, 0, player_jump_decel_rate * delta)
+			var velocity_vertical_cached = velocity.y
+			#velocity.x = move_toward(velocity.x, 0, player_jump_decel_rate * delta)
+			#velocity.z = move_toward(velocity.z, 0, player_jump_decel_rate * delta)
+			velocity = velocity.move_toward(Vector3.ZERO, player_decel_rate * delta)
+			velocity.y = velocity_vertical_cached
 		else:
 			velocity = velocity.move_toward(Vector3.ZERO, player_decel_rate * delta)
 
@@ -407,7 +410,7 @@ func rotate_cam_kb_m(event) -> void:
 		
 		# debug
 		#print($SpringArm3D.rotation.x)
-	
+
 
 func rotate_cam_joypad(delta: float) -> void:
 	# controller spring arm rotation
