@@ -40,8 +40,6 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/Wielder1_Sword2
 @onready var target_icon: TextureRect = $UI/TargetingIcon
-var spring_arm_default_scene := preload("res://scenes/spring_arm_default.tscn")
-var spring_arm_default_pos: Node3D
 
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 3.0
@@ -60,14 +58,6 @@ enum PlayerMovementState {
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
 var blending_movement_state: bool = false;
 
-func _enter_tree():
-	# create default spring arm position Node3D that the real spring arm will track.
-	spring_arm_default_pos = spring_arm_default_scene.instantiate()
-	#get_tree().current_scene.add_child(spring_arm_default_pos)
-	get_tree().current_scene.call_deferred("add_child", spring_arm_default_pos)
-	print(get_tree().current_scene)
-	#get_tree().current_scene.move_child(spring_arm_default_pos, 0)
-
 
 func _ready():
 	# capture mouse movement for camera navigation
@@ -81,7 +71,6 @@ func _ready():
 func _process(delta: float) -> void:
 	#print(Engine.get_frames_per_second())
 	#print(spring_arm_default_pos.position)
-	get_tree().current_scene.print_orphan_nodes()
 	pass
 
 
@@ -352,9 +341,6 @@ func handle_root_motion(delta: float) -> void:
 
 func determine_cam_lock_on(delta: float) -> void:
 	
-	# the intermediary spring arm targeting point that isn't parented to the player lazy tracks the player's SpringArmTarget.
-	spring_arm_default_pos.global_position = lerp(spring_arm_default_pos.global_position, $SpringArmTarget.global_position, cam_lerp_rate * delta)
-	
 	# if there is something to lock onto, smoothly lock on if the player targets.
 	if overlapping_object != null:
 		if Input.is_action_just_pressed("target"):
@@ -400,15 +386,14 @@ func determine_cam_lock_on(delta: float) -> void:
 				
 				target_icon.position = Vector2(target_viewport_x, target_viewport_y)
 				
-	# if not targeting anything, follow the player.
+	# if not targeting anything, follow the player. this is only a lerp to transition smoothly out of targeting state.
 	if !targeting:
-		# lazy track the intermediary spring arm targeting point, only on the Z, for smooth up/down camera movement.
-		#$SpringArm3D.global_position = spring_arm_default_pos.global_position
-		#$SpringArm3D.global_position.x = $SpringArmTarget.global_position.x
-		#$SpringArm3D.global_position.z = $SpringArmTarget.global_position.z
-		
-		# no lerping on player movement - essentially parented
-		$SpringArm3D.position = lerp($SpringArm3D.position, $SpringArmTarget.position, cam_lerp_rate * delta)
+		# if the player is jumping, lerp to another target pole for smooth vertical camera movement.
+		if not is_on_floor():
+			$SpringArm3D.position = lerp($SpringArm3D.position, $SpringArmJumpTarget.position, cam_lerp_rate * delta)
+		# otherwise, just track the player.
+		else:
+			$SpringArm3D.position = lerp($SpringArm3D.position, $SpringArmTarget.position, cam_lerp_rate * delta)
 
 
 func rotate_cam_kb_m(event) -> void:
