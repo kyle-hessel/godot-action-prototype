@@ -8,7 +8,7 @@ var player_speed_current: float = 0.0
 @export var player_jump_speed_modifier: float = 0.8
 @export var player_double_jump_modifier: float = 1.4
 @export var player_walk_accel_rate: float = 4.0
-@export var player_sprint_accel_rate: float = 7.0
+@export var player_sprint_accel_rate: float = 8.0
 @export var player_decel_rate: float = 14.0
 @export var player_jump_decel_rate: float = 10.0
 @export var player_rotation_rate: float = 9.0
@@ -253,16 +253,6 @@ func calculate_player_lateral_movement(delta: float) -> void:
 		stop_player_movement(delta)
 
 
-func apply_player_lateral_movement(dir: Vector3, modifier: float = 1.0) -> void:
-	if !is_jumping:
-		velocity.x = dir.x * player_speed_current * modifier
-		velocity.z = dir.z * player_speed_current * modifier
-	else:
-		var player_speed_jump: float = player_speed_current * player_jump_speed_modifier
-		velocity.x = dir.x * player_speed_jump * modifier
-		velocity.z = dir.z * player_speed_jump * modifier
-
-
 func calculate_player_movement_state(delta: float) -> void:
 	# determine movement state (sprinting or walking)
 	if Input.is_action_pressed("sprint"):
@@ -307,6 +297,16 @@ func smooth_accelerate(delta: float) -> void:
 			player_speed_current += (player_sprint_accel_rate * delta)
 		elif player_speed_current > player_speed_sprint_max:
 			player_speed_current = player_speed_sprint_max
+
+
+func apply_player_lateral_movement(dir: Vector3, modifier: float = 1.0) -> void:
+	if !is_jumping:
+		velocity.x = dir.x * player_speed_current * modifier
+		velocity.z = dir.z * player_speed_current * modifier
+	else:
+		var player_speed_jump: float = player_speed_current * player_jump_speed_modifier
+		velocity.x = dir.x * player_speed_jump * modifier
+		velocity.z = dir.z * player_speed_jump * modifier
 
 
 func stop_player_movement(delta: float) -> void:
@@ -490,6 +490,11 @@ func _on_animation_tree_animation_finished(anim_name):
 func _on_overlap_area_body_shape_entered(body_rid, body, body_shape_index, local_shape_index):
 	#print(body)
 	overlapping_object = body
+	
+	# auto-targeting when in range of first nearby enemy
+	if !targeting:
+		targeting = true
+		$UI/TargetingIcon.visible = true
 
 
 func _on_overlap_area_body_shape_exited(body_rid, body, body_shape_index, local_shape_index):
@@ -525,8 +530,8 @@ func looking_at_gd(target: Vector3, up: Vector3) -> Basis:
 	v_x.normalized()
 	var v_y: Vector3 = v_z.cross(v_x)
 	
-	var basis: Basis = Basis(v_x, v_y, v_z)
-	return basis
+	var v_basis: Basis = Basis(v_x, v_y, v_z)
+	return v_basis
 	
 # for meshes, such as player (minor modification of looking_at)
 func facing_object(target: Vector3, up: Vector3)-> Basis:
@@ -536,8 +541,8 @@ func facing_object(target: Vector3, up: Vector3)-> Basis:
 	v_x.normalized()
 	var v_y: Vector3 = v_z.cross(v_x)
 	
-	var basis: Basis = Basis(v_x, v_y, v_z)
-	return basis
+	var v_basis: Basis = Basis(v_x, v_y, v_z)
+	return v_basis
 	
 # generic, reimplemented from engine source
 func look_at_from_pos_gd(obj: Node3D, pos: Vector3, target: Vector3, up: Vector3) -> void:
