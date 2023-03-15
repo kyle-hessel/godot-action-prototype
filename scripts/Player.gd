@@ -58,7 +58,9 @@ enum PlayerMovementState {
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
-var blending_movement_state: bool = false;
+var blending_movement_state: bool = false
+var blending_weapon_state: bool = false
+var weapon_blend: float = 0.0
 
 
 func _ready():
@@ -94,8 +96,8 @@ func _physics_process(delta: float) -> void:
 	# camera movement w/ controller (should see if we can only call this if using a controller input this frame?)
 	rotate_cam_joypad(delta)
 	
-	# Set the player's animation tree blending value equal to the player's current speed.
-	anim_tree.set("parameters/IdleWalkRun_Jump/IdleWalkRunBlendspace/blend_position", velocity.length())
+	# determine any animation blends, such as from free movement states to weapon movement states.
+	set_anim_blend(delta)
 
 	# Collisions
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
@@ -156,7 +158,6 @@ func apply_jump_and_gravity(delta: float) -> void:
 	# Apply gravity, reset jumps
 	if not is_on_floor():
 		velocity.y -= gravity * gravity_multiplier * delta
-		
 		# start fall animation (same as jump)
 		if !is_jumping:
 			anim_tree.set("parameters/IdleWalkRun_Jump/conditions/jump_end", false)
@@ -581,6 +582,8 @@ func handle_weapon_actions(event) -> void:
 				movement_state = PlayerMovementState.ATTACK
 				anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 				current_weapon.visible = true
+				# swap to holding weapon animations
+				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
 				attack_combo_stage += 1
 			# if already attacking, determine if the attack combo is continued.
 			else:
@@ -601,6 +604,8 @@ func handle_weapon_actions(event) -> void:
 #				movement_state = PlayerMovementState.ATTACK
 #				anim_tree.set("parameters/AttackMidairShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 #				current_weapon.visible = true
+				# swap to holding weapon animations
+#				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
 #				attack_combo_stage += 1
 				pass
 			else:
@@ -616,6 +621,18 @@ func sort_objects_by_distance() -> void:
 	# makes use of a custom sorting lambda function to compare distances between points and the player, and sort lowest to highest!
 	if overlapping_objects.size() > 1:
 		overlapping_objects.sort_custom(func(a, b): return a.global_position.distance_squared_to($starblade_wielder.global_position) < b.global_position.distance_squared_to($starblade_wielder.global_position))
+
+
+func set_anim_blend(delta: float) -> void:
+	if blending_weapon_state:
+		if weapon_blend <= 0.05:
+			weapon_blend = 0.0
+			blending_weapon_state = false
+		else:
+			weapon_blend = lerpf(weapon_blend, 0.0, 2.0 * delta)
+	
+	# Set the player's animation tree blending value equal to the player's current speed and weapon blend value (for switching between free animations & weapon animations)
+	anim_tree.set("parameters/IdleWalkRun_Jump/IdleWalkRunWeaponBlendspace/blend_position", Vector2(velocity.length(), weapon_blend))
 
 
 # determine what happens when specific animations end.
@@ -638,6 +655,7 @@ func _on_animation_tree_animation_finished(anim_name):
 		else:
 			movement_state = PlayerMovementState.IDLE
 			attack_combo_stage = 0
+			# start timer again so that there is a buffer between when combat ends and when weapon vanishes
 			vanish_timer.start(vanish_timer_duration)
 		
 		# always set back to false so that future combo animations don't play automatically.
@@ -690,9 +708,19 @@ func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_
 func _on_vanish_timer_timeout() -> void:
 	print("vanish")
 	current_weapon.visible = false
+	blending_weapon_state = true
 
 
 ### HELPER FUNCTIONS
+func tween_val(object: Node, property: NodePath, final_val: Variant, duration: float, trans_type: Tween.TransitionType, ease_type: Tween.EaseType, parallel: bool):
+	var tween: Tween = get_tree().create_tween()
+	tween.stop()
+	tween.set_trans(trans_type)
+	tween.set_ease(ease_type)
+	tween.set_parallel(parallel)
+	tween.tween_property(object, property, final_val, duration)
+	tween.play()
+
 # generic, reimplemented from engine source
 func looking_at_gd(target: Vector3, up: Vector3) -> Basis:
 	var v_z: Vector3 = -target.normalized()
