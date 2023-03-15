@@ -40,7 +40,11 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/Wielder1_Sword2
-@onready var target_icon: TextureRect = $UI/TargetingIcon
+@onready var target_icon: Sprite2D = $UI/TargetingIcon
+
+var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
+var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
+var viewport_wh: Vector2 = Vector2(viewport_width, viewport_height)
 
 @export var mouse_sensitivity: float = 2.5
 @export var joystick_sensitivity: float = 3.0
@@ -69,6 +73,8 @@ func _ready():
 	
 	current_weapon.visible = false
 	
+	# viewport-relative scaling for UI elements
+	target_icon.scale = Vector2(viewport_width * 0.00005, viewport_width * 0.00005)
 
 
 # fluctuating framerate-based delta time
@@ -530,15 +536,10 @@ func determine_cam_lock_on(delta: float) -> void:
 				tracking = false
 				
 			# target icon placement
-			var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
-			var viewport_height: int = ProjectSettings.get_setting("display/window/size/viewport_height")
-			var enemy_viewport_pos: Vector2 = player_cam.unproject_position(targeted_object.global_transform.origin)
-			var horizontal_offset: float = 4.5
-				
-			var target_viewport_x: float = enemy_viewport_pos.x - horizontal_offset * viewport_height * 0.005
-			var target_viewport_y: float = enemy_viewport_pos.y - (half_height * viewport_height * 0.15)
-				
-			target_icon.position = Vector2(target_viewport_x, target_viewport_y)
+			var icon_target_pos: Vector3 = Vector3(targeted_object.position.x, targeted_object.position.y + (half_height * 1.25), targeted_object.position.z)
+			var enemy_viewport_pos: Vector2 = player_cam.unproject_position(icon_target_pos)
+					
+			target_icon.position = enemy_viewport_pos
 				
 	# if not tracking anything, follow the player. this is a lerp to transition smoothly out of targeting state.
 	if !tracking:
