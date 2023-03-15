@@ -344,6 +344,7 @@ func handle_root_motion(delta: float) -> void:
 	apply_only_gravity(delta)
 
 
+# advanced target lock handling
 func determine_target() -> void:
 	if !overlapping_objects.is_empty():
 		# toggling targeting on and off
@@ -357,7 +358,7 @@ func determine_target() -> void:
 					sort_objects_by_distance()
 					
 					# extra checks to ensure object is fit for targeting (visibility, mostly)
-					targeted_object = object_visibility_check()
+					targeted_object = objects_visibility_check(overlapping_objects) # returns first closest visible object
 					
 					# if no object met requirements, set targeting back to false.
 					if targeted_object == null:
@@ -368,19 +369,104 @@ func determine_target() -> void:
 				else:
 					targeted_object = null
 					tracking = false
-					
-		# move target backwards
-		if Input.is_action_just_pressed("toggle_target_left"):
-			pass
+		
+		# target toggling/switching, only if already actively in target mode.
+		if targeting && overlapping_objects.size() > 1:	
 			
-		# move target forwards
-		if Input.is_action_just_pressed("toggle_target_right"):
-			pass
+			# move target backwards
+			if Input.is_action_just_pressed("toggle_target_left"):
+				# sort again so that distance information is always up to date, then fetch our current target's new array position.
+				sort_objects_by_distance()
+				var obj_index: int = overlapping_objects.find(targeted_object)
+				
+				var failed: bool = false
+				
+				# check if next potential candidate is non-existent (out of bounds). If not, do the below check.
+				if !(obj_index + 1 > overlapping_objects.size() - 1):
+					# determine the next object to target that is further than the one we started with.
+					for obj in overlapping_objects:
+						# skip array indexes lower (closer) than our initial object, inclusive.
+						var current_index: int = overlapping_objects.find(obj)
+						if current_index <= obj_index:
+							continue
+						# extra checks to ensure object is fit for targeting (this is why the for loop is necessary).
+						else:
+							print(obj)
+							if object_visibility_check(obj) == true:
+								# if everything succeeded, retarget to the given object and break out.
+								targeted_object = obj
+								break
+							else:
+								# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
+								targeted_object = objects_visibility_check(overlapping_objects)
+								break
+						
+				# if the next candidate was out of bounds, wrap back to the front of the array.
+				else:
+					# do similar checks to above to find the lowest indexed object that meets requirements.
+					for obj in overlapping_objects:
+						# simply start at the beginning of the array, since we wrapped around.
+						if object_visibility_check(obj) == true:
+							# if everything succeeded, retarget to the given object and break out.
+							targeted_object = obj
+							break
+						else:
+							# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
+							targeted_object = objects_visibility_check(overlapping_objects)
+							break
+				
+				
+			# move target forwards
+			if Input.is_action_just_pressed("toggle_target_right"):
+				# sort again so that distance information is always up to date.
+				sort_objects_by_distance()
+				
+				# duplicate our original array and reverse it to maintain easy looping, now sorting from furthest to closest.
+				var overlapping_objects_reversed: Array[Node3D] = overlapping_objects.duplicate()
+				overlapping_objects_reversed.reverse()
+				print(overlapping_objects_reversed)
+				
+				# fetch our current target's new array position.
+				var obj_index: int = overlapping_objects_reversed.find(targeted_object)
+				
+				# check if next potential candidate is non-existent. If not, do the below check.
+				if !(obj_index + 1 > overlapping_objects_reversed.size() - 1):
+					# determine the next object to target that is further than the one we started with.
+					for obj in overlapping_objects_reversed:
+						# skip array indexes lower (farther) than our initial object, inclusive.
+						var current_index: int = overlapping_objects_reversed.find(obj)
+						if current_index <= obj_index:
+							continue
+						# extra checks to ensure object is fit for targeting.
+						else:
+							print(obj)
+							if object_visibility_check(obj) == true:
+								# if everything succeeded, retarget to the given object and break out.
+								targeted_object = obj
+								break
+							else:
+								# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
+								targeted_object = objects_visibility_check(overlapping_objects_reversed)
+								break
+				
+				# if the next candidate was out of bounds, wrap back to the front of the array.
+				else:
+					# do similar checks to above to find the lowest indexed object that meets requirements.
+					for obj in overlapping_objects_reversed:
+						# simply start at the beginning of the array, since we wrapped around.
+						if object_visibility_check(obj) == true:
+							# if everything succeeded, retarget to the given object and break out.
+							targeted_object = obj
+							break
+						else:
+							# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
+							targeted_object = objects_visibility_check(overlapping_objects_reversed)
+							break
 
 
 # returns the first valid candidate for targeting if visiblity checks pass, if there is one.
-func object_visibility_check() -> Node3D:
-	for object in overlapping_objects:
+func objects_visibility_check(obj_array: Array[Node3D]) -> Node3D:
+	for object in obj_array:
 		var half_height: float = object.collision_shape.shape.height * 0.5
 		var target_pos: Vector3 = Vector3(object.position.x, object.position.y + half_height, object.position.z)
 		
@@ -390,6 +476,14 @@ func object_visibility_check() -> Node3D:
 			
 	# if whole loop completes without a candidate, return null
 	return null
+
+
+# returns whether a given object is in view instead of iterating over all overlapping objects.
+func object_visibility_check(object: Node3D) -> bool:
+	var half_height: float = object.collision_shape.shape.height * 0.5
+	var target_pos: Vector3 = Vector3(object.position.x, object.position.y + half_height, object.position.z)
+	
+	return player_cam.is_position_in_frustum(target_pos)
 
 
 func determine_cam_lock_on(delta: float) -> void:
