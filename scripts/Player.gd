@@ -85,7 +85,7 @@ func _physics_process(delta: float) -> void:
 	# calls either rotate_player_movement or rotate_player_combat
 	determine_player_rotation(delta)
 	
-	# for default targeting or targeting enemies / objects
+	# for default targeting or manually targeting enemies / objects. relies on determine_target in _input.
 	determine_cam_lock_on(delta)
 			
 	# camera movement w/ controller (should see if we can only call this if using a controller input this frame?)
@@ -116,9 +116,13 @@ func _input(event):
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
+	# figure out current target if there is one, so that we know what to lock onto.
+	determine_target()
+	
 	# handle what happens when the player attacks.
 	# using 'event.' instead of 'Input.' for better input event buffering.
 	handle_weapon_actions(event)
+
 
 # determine if player rotates relative to the camera or relative to an enemy or object.
 func determine_player_rotation(delta: float) -> void:
@@ -371,6 +375,7 @@ func determine_target() -> void:
 					tracking = false
 		
 		# target toggling/switching, only if already actively in target mode.
+		# *** the below implementation for the remainder of this function does have a few edge case bugs remaining, seemingly.
 		if targeting && overlapping_objects.size() > 1:	
 			
 			# move target backwards
@@ -487,9 +492,6 @@ func object_visibility_check(object: Node3D) -> bool:
 
 
 func determine_cam_lock_on(delta: float) -> void:
-	# figure out current target if there is one, so that we know what to lock onto.
-	determine_target()
-	
 	# if there is something to lock onto, smoothly lock on if the player targets.
 	if targeted_object != null:
 		if targeting:
@@ -537,7 +539,7 @@ func determine_cam_lock_on(delta: float) -> void:
 				
 			target_icon.position = Vector2(target_viewport_x, target_viewport_y)
 				
-	# if not tracking anything, follow the player. this is only a lerp to transition smoothly out of targeting state.
+	# if not tracking anything, follow the player. this is a lerp to transition smoothly out of targeting state.
 	if !tracking:
 		# if the player is jumping, lerp to another target pole for smooth vertical camera movement.
 		if not is_on_floor():
