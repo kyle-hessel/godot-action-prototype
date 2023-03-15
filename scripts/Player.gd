@@ -85,6 +85,9 @@ func _physics_process(delta: float) -> void:
 	# calls either rotate_player_movement or rotate_player_combat
 	determine_player_rotation(delta)
 	
+	# figure out current target if there is one, so that we know what to lock onto.
+	determine_target()
+	
 	# for default targeting or manually targeting enemies / objects. relies on determine_target in _input.
 	determine_cam_lock_on(delta)
 			
@@ -115,9 +118,6 @@ func _input(event):
 	# camera movement w/ mouse (should see if we can only call this if using a keyboard input this frame?)
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
-	
-	# figure out current target if there is one, so that we know what to lock onto.
-	determine_target()
 	
 	# handle what happens when the player attacks.
 	# using 'event.' instead of 'Input.' for better input event buffering.
@@ -749,7 +749,7 @@ func facing_object_from_pos_lerp(obj: Node3D, pos: Vector3, target: Vector3, up:
 func look_at_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> void:
 	var origin: Vector3 = obj.global_transform.origin
 	look_at_from_pos_lerp(obj, origin, target, up, delta)
-	
+
 # for meshes, such as player (minor modification of look_at)
 func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -> void:
 	var origin: Vector3 = obj.global_transform.origin
