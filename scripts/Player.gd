@@ -539,7 +539,11 @@ func determine_cam_lock_on(delta: float) -> void:
 			var icon_target_pos: Vector3 = Vector3(targeted_object.position.x, targeted_object.position.y + (half_height * 1.25), targeted_object.position.z)
 			var enemy_viewport_pos: Vector2 = player_cam.unproject_position(icon_target_pos)
 					
-			target_icon.position = enemy_viewport_pos
+			if player_cam.is_position_in_frustum(icon_target_pos):
+				target_icon.visible = true
+				target_icon.position = enemy_viewport_pos
+			else:
+				target_icon.visible = false
 				
 	# if not tracking anything, follow the player. this is a lerp to transition smoothly out of targeting state.
 	if !tracking:
@@ -713,7 +717,7 @@ func _on_vanish_timer_timeout() -> void:
 
 
 ### HELPER FUNCTIONS
-func tween_val(object: Node, property: NodePath, final_val: Variant, duration: float, trans_type: Tween.TransitionType, ease_type: Tween.EaseType, parallel: bool):
+func tween_val(object: Node, property: NodePath, final_val: Variant, duration: float, trans_type: Tween.TransitionType = Tween.TRANS_LINEAR, ease_type: Tween.EaseType = Tween.EASE_IN_OUT, parallel: bool = true):
 	var tween: Tween = get_tree().create_tween()
 	tween.stop()
 	tween.set_trans(trans_type)
