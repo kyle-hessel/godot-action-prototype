@@ -8,7 +8,7 @@ var player_speed_current: float = 0.0
 @export var player_jump_speed_modifier: float = 0.8
 @export var player_double_jump_modifier: float = 1.4
 @export var player_walk_accel_rate: float = 4.0
-@export var player_sprint_accel_rate: float = 8.0
+@export var player_sprint_accel_rate: float = 9.0
 @export var player_decel_rate: float = 14.0
 @export var player_jump_decel_rate: float = 10.0
 @export var player_rotation_rate: float = 9.0
@@ -600,7 +600,7 @@ func handle_weapon_actions(event) -> void:
 							vanish_timer.start(vanish_timer_duration)
 					2:
 						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
-						if anim_duration > 0.15 && anim_duration < 0.55:
+						if anim_duration > 0.15 && anim_duration < 0.6:
 							continue_attack_chain = true
 							vanish_timer.start(vanish_timer_duration)
 		# midair attacks
