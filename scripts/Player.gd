@@ -58,7 +58,8 @@ enum PlayerMovementState {
 	WALK = 1,
 	SPRINT = 2,
 	ROLL = 3,
-	ATTACK = 4
+	ATTACK = 4,
+	DAMAGED = 5
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
@@ -257,7 +258,7 @@ func calculate_player_lateral_movement(delta: float) -> void:
 			calculate_player_movement_state(delta)
 
 
-		apply_player_lateral_movement(direction)
+		apply_player_lateral_movement(delta, direction)
 		
 	
 	# if there's no input, determine how/if we decelerate.
@@ -312,14 +313,14 @@ func smooth_accelerate(delta: float) -> void:
 			player_speed_current = player_speed_sprint_max
 
 
-func apply_player_lateral_movement(dir: Vector3, modifier: float = 1.0) -> void:
+func apply_player_lateral_movement(delta: float, dir: Vector3, modifier: float = 120.0) -> void: # last param (modifier) is to scale w/ delta
 	if !is_jumping:
-		velocity.x = dir.x * player_speed_current * modifier
-		velocity.z = dir.z * player_speed_current * modifier
+		velocity.x = dir.x * player_speed_current * modifier * delta
+		velocity.z = dir.z * player_speed_current * modifier * delta
 	else:
 		var player_speed_jump: float = player_speed_current * player_jump_speed_modifier
-		velocity.x = dir.x * player_speed_jump * modifier
-		velocity.z = dir.z * player_speed_jump * modifier
+		velocity.x = dir.x * player_speed_jump * modifier * delta
+		velocity.z = dir.z * player_speed_jump * modifier * delta
 
 
 func stop_player_movement(delta: float) -> void:
