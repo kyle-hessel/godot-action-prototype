@@ -13,12 +13,13 @@ var targeted_player: Node3D = null
 
 enum EnemyMovementState {
 	IDLE = 0,
-	TRACK = 1,
-	RELOCATE = 2,
-	GUARD = 3,
-	ATTACK = 4,
-	FLEE = 5,
-	DAMAGED = 6
+	ROAMING = 1,
+	TRACK = 2,
+	RELOCATE = 3,
+	GUARD = 4,
+	ATTACK = 5,
+	FLEE = 6,
+	DAMAGED = 7
 }
 
 var movement_state: EnemyMovementState = EnemyMovementState.IDLE
@@ -56,17 +57,24 @@ func _physics_process(delta: float) -> void:
 
 # navigates to a player, relying on target_pos (updated from update_nav_target_pos)
 func execute_nav(delta: float, modifier: float = 120.0) -> void:
-	
+	var new_velocity: Vector3
 	movement_state = EnemyMovementState.TRACK
 	
-	var current_location: Vector3 = global_position
-	var next_location: Vector3 = nav_agent.get_next_path_position()
-	# get the direction to the next point, and multiply that by an arbitrary speed to get a new velocity (vector) w/ direction + magnitude.
-	var new_velocity: Vector3 = (next_location - current_location).normalized() * enemy_speed * delta * modifier
+	# only navigate if the target can be reached.
+	if nav_agent.is_target_reachable():
+		var current_location: Vector3 = global_position
+		var next_location: Vector3 = nav_agent.get_next_path_position()
+		# get the direction to the next point, and multiply that by an arbitrary speed to get a new velocity (vector) w/ direction + magnitude.
+		new_velocity = (next_location - current_location).normalized() * enemy_speed * delta * modifier
+	else:
+		new_velocity = Vector3.ZERO
+		#movement_state = EnemyMovementState.IDLE
 	
 	# converts our newly calculated velocity to a 'safe velocity' that factors in other nearby agents, etc.
 	# see _on_navigation_agent_3d_velocity_computed.
 	nav_agent.set_velocity(new_velocity)
+	
+	print(nav_agent.is_target_reachable())
 
 
 # called by the level itself, as of now Level.gd
