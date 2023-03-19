@@ -4,7 +4,12 @@ class_name Enemy
 
 var enemy_speed: float = 5.0
 @export var enemy_rotation_rate: float = 7.0
+@export var root_motion_multiplier: int = 3000
+var guard_player_distance: float = 32.0
+var rng := RandomNumberGenerator.new()
+var guard_time_rand: float
 
+@onready var anim_tree : AnimationTree = $AnimationTree
 @onready var collision_shape : CollisionShape3D = $CollisionShape3D
 @onready var nav_agent : NavigationAgent3D = $NavigationAgent3D
 
@@ -22,18 +27,28 @@ enum EnemyMovementState {
 	DAMAGED = 7
 }
 
+enum EnemyType {
+	SMALL = 0,
+	MEDIUM = 1,
+	LARGE = 2,
+	FLYING = 3
+}
+
 var movement_state: EnemyMovementState = EnemyMovementState.IDLE
+@export var enemy_type: EnemyType # set per enemy type in editor
 
 func _ready() -> void:
-	pass
+	rng.randomize()
 
 
 func _physics_process(delta: float) -> void:
+	#print(movement_state)
+	anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
 	# if there is a player, do something
 	if targeted_player != null:
-		
-		# if we aren't on guard, navigate.
-		if movement_state != EnemyMovementState.GUARD:
+		# if we aren't on guard or attacking, navigate.
+		if movement_state != EnemyMovementState.GUARD && movement_state != EnemyMovementState.ATTACK:
+			
 			if !$GuardTimer.is_stopped():
 				$GuardTimer.stop()
 				
@@ -43,12 +58,22 @@ func _physics_process(delta: float) -> void:
 			rotate_enemy_tracking(delta)
 			
 		# if guarding, periodically check what the player is doing.
-		else:
+		if movement_state == EnemyMovementState.GUARD:
 			if $GuardTimer.is_stopped():
-				$GuardTimer.start()
+				start_guard_timer()
 			
 			# face the player smoothly
 			rotate_enemy_tracking(delta)
+		
+		# if in attack state, use root motion from anim.
+		elif movement_state == EnemyMovementState.ATTACK:
+			handle_root_motion(delta)
+			move_and_slide()
+			
+			# damage player, WIP
+			if global_position.distance_squared_to(targeted_player.global_position) < 2.0:
+				pass
+			
 	# if there's no player, just be still.
 	else:
 		movement_state = EnemyMovementState.IDLE
@@ -68,13 +93,12 @@ func execute_nav(delta: float, modifier: float = 120.0) -> void:
 		new_velocity = (next_location - current_location).normalized() * enemy_speed * delta * modifier
 	else:
 		new_velocity = Vector3.ZERO
-		#movement_state = EnemyMovementState.IDLE
 	
 	# converts our newly calculated velocity to a 'safe velocity' that factors in other nearby agents, etc.
 	# see _on_navigation_agent_3d_velocity_computed.
 	nav_agent.set_velocity(new_velocity)
 	
-	print(nav_agent.is_target_reachable())
+	#print(nav_agent.is_target_reachable())
 
 
 # called by the level itself, as of now Level.gd
@@ -83,18 +107,40 @@ func update_nav_target_pos(target_pos: Vector3) -> void:
 		nav_agent.set_target_position(target_pos)
 
 
+# starts guard timer, randomizing its exact wait time.
+func start_guard_timer() -> void:
+	rng.randomize()
+	guard_time_rand = rng.randf_range(0.75, 2.0)
+	$GuardTimer.wait_time = guard_time_rand
+	$GuardTimer.start()
+
+
 func rotate_enemy_tracking(delta: float) -> void:
 	face_object_lerp($EnemyMesh, targeted_player.position, Vector3.UP, delta)
 	# zero out X and Z rotations so that the enemy can't rotate in odd ways.
 	$EnemyMesh.rotation.x = 0.0;
 	$EnemyMesh.rotation.z = 0.0;
 
+
+# determine how to move when applying root motion.
+func handle_root_motion(delta: float) -> void:
+	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
+	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
+	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y)
+	
+	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
+	velocity += root_motion * root_motion_multiplier * delta
+
+
 # when enemy gets within a set distance to the target (player), switch to guard state.
 func _on_navigation_agent_3d_target_reached():
-	movement_state = EnemyMovementState.GUARD
-	velocity = Vector3.ZERO
+	if movement_state == EnemyMovementState.TRACK || movement_state == EnemyMovementState.RELOCATE:
+		movement_state = EnemyMovementState.GUARD
+		# change this to decel
+		velocity = Vector3.ZERO
 
 
+# final velocity when in track state
 func _on_navigation_agent_3d_velocity_computed(safe_velocity):
 	# smoother velocity with move_toward, helps with corners, etc
 	velocity = velocity.move_toward(safe_velocity, 0.25)
@@ -105,7 +151,19 @@ func _on_guard_timer_timeout():
 	if targeted_player != null:
 		# if the player gets too far away, resume tracking
 		var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
-		if (to_player.length_squared() > 12.0):
+		if (to_player.length_squared() > guard_player_distance):
+			movement_state = EnemyMovementState.TRACK
+		# if the player is in range, attack!
+		else:
+			movement_state = EnemyMovementState.ATTACK
+			anim_tree.set("parameters/AttackShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			$GuardTimer.stop()
+
+
+func _on_animation_tree_animation_finished(anim_name):
+	# if finishing attack animation, resume TRACK state.
+	if movement_state == EnemyMovementState.ATTACK:
+		if anim_name == "EnemyAttack1":
 			movement_state = EnemyMovementState.TRACK
 
 
@@ -116,6 +174,10 @@ func _on_overlap_area_body_entered(body):
 			targeted_player = body
 		else:
 			nearby_players.push_back(body)
+	# don't be aware of self, of course. necessary because of collision layer junk
+	if body is Enemy:
+		if !(body == $"."):
+			print(body)
 
 
 func _on_overlap_area_body_exited(body):
@@ -138,7 +200,7 @@ func tween_val(object: Node, property: NodePath, final_val: Variant, duration: f
 	
 # for meshes, such as player (minor modification of looking_at)
 func facing_object(target: Vector3, up: Vector3)-> Basis:
-	var v_z: Vector3 = -target.normalized()
+	var v_z: Vector3 = target.normalized()
 	var v_x: Vector3 = up.cross(v_z)
 	
 	v_x.normalized()

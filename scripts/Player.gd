@@ -596,12 +596,12 @@ func handle_weapon_actions(event) -> void:
 				match attack_combo_stage:
 					1:
 						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
-						if anim_duration >= 0.2 && anim_duration <= 0.6:
+						if anim_duration >= 0.2 && anim_duration <= 0.7:
 							continue_attack_chain = true
 							vanish_timer.start(vanish_timer_duration)
 					2:
 						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
-						if anim_duration > 0.15 && anim_duration < 0.6:
+						if anim_duration > 0.3 && anim_duration < 0.8:
 							continue_attack_chain = true
 							vanish_timer.start(vanish_timer_duration)
 		# midair attacks

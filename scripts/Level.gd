@@ -5,6 +5,7 @@ var physics_tick: int = ProjectSettings.get_setting("physics/common/physics_tick
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	randomize()
 	# relocate this somewhere else later, not in level script. Preferably in a singleton or something.
 	Engine.max_fps = physics_tick  # maybe don't let this go above physics_tick
 	

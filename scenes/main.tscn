@@ -1,10 +1,10 @@
-[gd_scene load_steps=23 format=3 uid="uid://bsmfvvtupods4"]
+[gd_scene load_steps=23 format=3 uid="uid://wr13h1xbxd0v"]
 
 [ext_resource type="PackedScene" uid="uid://cc7svareltvw7" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Level.gd" id="1_wxnjq"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/experimental/water.tres" id="3_c4y8b"]
 [ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
-[ext_resource type="PackedScene" uid="uid://dsntrswipiq46" path="res://3D_models/characters/enemies/test/enemy_test.tscn" id="6_alslt"]
+[ext_resource type="PackedScene" uid="uid://dsntrswipiq46" path="res://3D_models/characters/enemies/starfiend1/cloaked_starfiend.tscn" id="6_af7ak"]
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_8bey6"]
@@ -203,11 +203,11 @@ size = Vector3(22.5097, 5.84383, 7.78585)
 
 [node name="Enemies" type="Node3D" parent="."]
 
-[node name="Enemy_Test" parent="Enemies" instance=ExtResource("6_alslt")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.4703, 14.1866, 0.86465)
+[node name="EnemyStarfiend" parent="." instance=ExtResource("6_af7ak")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.3469, 14.1866, 2.65404)
 
-[node name="Enemy_Test2" parent="Enemies" instance=ExtResource("6_alslt")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.2718, 14.1866, 6.49818)
+[node name="EnemyStarfiend2" parent="." instance=ExtResource("6_af7ak")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.3052, 14.1866, -0.508535)
 
-[node name="Enemy_Test3" parent="Enemies" instance=ExtResource("6_alslt")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.9444, 14.1866, 9.5209)
+[node name="EnemyStarfiend3" parent="." instance=ExtResource("6_af7ak")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.2615, 14.1866, 5.89291)
