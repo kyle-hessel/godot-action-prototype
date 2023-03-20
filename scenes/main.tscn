@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/Level.gd" id="1_wxnjq"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/experimental/water.tres" id="3_c4y8b"]
 [ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
-[ext_resource type="PackedScene" uid="uid://dsntrswipiq46" path="res://3D_models/characters/enemies/starfiend1/cloaked_starfiend.tscn" id="6_af7ak"]
+[ext_resource type="PackedScene" uid="uid://cokkv33v0mm1f" path="res://3D_models/characters/enemies/starfiend1/cloaked_starfiend.tscn" id="6_af7ak"]
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_8bey6"]
