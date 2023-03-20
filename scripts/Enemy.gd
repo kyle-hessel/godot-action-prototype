@@ -8,10 +8,12 @@ var enemy_speed: float = 5.0
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
+var hit_registered: bool = false
 
 @onready var anim_tree : AnimationTree = $AnimationTree
 @onready var collision_shape : CollisionShape3D = $CollisionShape3D
 @onready var nav_agent : NavigationAgent3D = $NavigationAgent3D
+@onready var combat_cast: ShapeCast3D = $EnemyMesh/CombatCast3D
 
 var nearby_players: Array[Node3D]
 var targeted_player: Node3D = null
@@ -24,7 +26,8 @@ enum EnemyMovementState {
 	GUARD = 4,
 	ATTACK = 5,
 	FLEE = 6,
-	DAMAGED = 7
+	DAMAGED = 7,
+	DOWN = 8
 }
 
 enum EnemyType {
@@ -39,6 +42,7 @@ var movement_state: EnemyMovementState = EnemyMovementState.IDLE
 
 func _ready() -> void:
 	rng.randomize()
+	combat_cast.enabled = false
 
 
 func _physics_process(delta: float) -> void:
@@ -71,8 +75,12 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 			
 			# damage player, WIP
-			if global_position.distance_squared_to(targeted_player.global_position) < 2.0:
-				pass
+			if combat_cast.is_colliding():
+				if !hit_registered:
+					#print(combat_cast.collision_result[0]["collider"])
+					if combat_cast.collision_result[0]["collider"] is Player:
+						print("bruh")
+						hit_registered = true
 			
 	# if there's no player, just be still.
 	else:
@@ -115,6 +123,13 @@ func start_guard_timer() -> void:
 	$GuardTimer.start()
 
 
+func begin_attack() -> void:
+	movement_state = EnemyMovementState.ATTACK
+	combat_cast.enabled = true
+	anim_tree.set("parameters/AttackShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	$GuardTimer.stop()
+
+
 func rotate_enemy_tracking(delta: float) -> void:
 	face_object_lerp($EnemyMesh, targeted_player.position, Vector3.UP, delta)
 	# zero out X and Z rotations so that the enemy can't rotate in odd ways.
@@ -155,16 +170,16 @@ func _on_guard_timer_timeout():
 			movement_state = EnemyMovementState.TRACK
 		# if the player is in range, attack!
 		else:
-			movement_state = EnemyMovementState.ATTACK
-			anim_tree.set("parameters/AttackShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-			$GuardTimer.stop()
+			begin_attack()
 
 
 func _on_animation_tree_animation_finished(anim_name):
 	# if finishing attack animation, resume TRACK state.
 	if movement_state == EnemyMovementState.ATTACK:
+		hit_registered = false
 		if anim_name == "EnemyAttack1":
 			movement_state = EnemyMovementState.TRACK
+			combat_cast.enabled = false
 
 
 func _on_overlap_area_body_entered(body):

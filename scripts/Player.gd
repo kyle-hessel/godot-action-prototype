@@ -2,6 +2,9 @@ extends CharacterBody3D
 
 class_name Player
 
+@export var player_health_max: float = 50.0
+@export var player_health_current: float = player_health_max
+
 var player_speed_current: float = 0.0
 @export var player_speed_walk_max: float = 6.0
 @export var player_speed_sprint_max: float = player_speed_walk_max * 2.0
@@ -59,7 +62,8 @@ enum PlayerMovementState {
 	SPRINT = 2,
 	ROLL = 3,
 	ATTACK = 4,
-	DAMAGED = 5
+	DAMAGED = 5,
+	DOWN = 6
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
@@ -143,8 +147,7 @@ func determine_player_rotation(delta: float) -> void:
 		# combat directional lerp to face enemy when attacking
 		if targeted_object != null && targeting:
 			# only rotate to match enemy if not extremely close to them
-			if $starblade_wielder.global_position.distance_to(targeted_object.global_position) > 1.0:
-				rotate_player_combat(delta)
+			rotate_player_combat(delta)
 
 
 func rotate_player_movement(delta: float) -> void:
@@ -155,10 +158,12 @@ func rotate_player_movement(delta: float) -> void:
 
 
 func rotate_player_combat(delta: float) -> void:
-	face_object_lerp($starblade_wielder, targeted_object.position, Vector3.UP, delta)
+	face_object_lerp($starblade_wielder, targeted_object.global_position, Vector3.UP, delta)
 	# zero out X and Z rotations so that the player can't rotate in odd ways and get stuck there.
 	$starblade_wielder.rotation.x = 0.0;
 	$starblade_wielder.rotation.z = 0.0;
+	# maybe not necessary, but recommended - see https://docs.godotengine.org/en/stable/tutorials/3d/using_transforms.html
+	$starblade_wielder.global_transform = $starblade_wielder.global_transform.orthonormalized()
 
 
 func apply_jump_and_gravity(delta: float) -> void:
