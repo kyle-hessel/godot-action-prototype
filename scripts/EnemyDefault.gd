@@ -2,18 +2,25 @@ extends Enemy
 
 class_name EnemyDefault
 
+@export var enemy_health_max: float = 20.0
+@export var enemy_health_current: float = enemy_health_max
+
 var enemy_speed: float = 5.0
 @export var enemy_rotation_rate: float = 7.0
 @export var root_motion_multiplier: int = 3000
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
+@onready var i_frames_in_sec: float = 0.25
+@export var wait_time_floor: float = 0.75
+@export var wait_time_ceiling: float = 2.0
 var hit_registered: bool = false
 
 @onready var anim_tree : AnimationTree = $AnimationTree
 @onready var collision_shape : CollisionShape3D = $CollisionShape3D
 @onready var nav_agent : NavigationAgent3D = $NavigationAgent3D
 @onready var combat_cast: ShapeCast3D = $EnemyMesh/CombatCast3D
+@onready var i_frames: Timer = $InvincibilityTimer
 
 var nearby_allies: Array[Node3D]
 var nearby_players: Array[Node3D]
@@ -26,8 +33,8 @@ enum EnemyMovementState {
 	RELOCATE = 3,
 	GUARD = 4,
 	ATTACK = 5,
-	FLEE = 6,
-	DAMAGED = 7,
+	DAMAGED = 6,
+	FLEE = 7,
 	DOWN = 8
 }
 
@@ -106,7 +113,7 @@ func update_nav_target_pos(target_pos: Vector3) -> void:
 # starts guard timer, randomizing its exact wait time.
 func start_guard_timer() -> void:
 	rng.randomize()
-	guard_time_rand = rng.randf_range(0.75, 2.0)
+	guard_time_rand = rng.randf_range(wait_time_floor, wait_time_ceiling)
 	$GuardTimer.wait_time = guard_time_rand
 	$GuardTimer.start()
 
@@ -116,9 +123,7 @@ func begin_attack() -> void:
 	combat_cast.enabled = true
 	anim_tree.set("parameters/AttackShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	$GuardTimer.stop()
-	
-	#for ally in nearby_allies:
-		#combat_cast.add_exception(ally)
+
 
 func handle_attack_state(delta: float) -> void:
 	# in attack state, drive velocity with root motion from anim.
@@ -201,7 +206,7 @@ func _on_animation_tree_animation_finished(anim_name):
 			combat_cast.enabled = false
 
 
-func _on_overlap_area_body_entered(body):
+func _on_overlap_area_body_entered(body: Node3D):
 	if body is Player:
 		if nearby_players.is_empty():
 			nearby_players.push_back(body)
@@ -214,10 +219,10 @@ func _on_overlap_area_body_entered(body):
 		if !(body == $"."):
 			nearby_allies.push_back(body)
 			combat_cast.add_exception(body)
-			print(nearby_allies)
+			#print(nearby_allies)
 
 
-func _on_overlap_area_body_exited(body):
+func _on_overlap_area_body_exited(body: Node3D):
 	if body is Player:
 		nearby_players.erase(body)
 		

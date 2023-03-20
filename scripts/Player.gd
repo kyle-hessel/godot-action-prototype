@@ -4,6 +4,8 @@ class_name Player
 
 @export var player_health_max: float = 50.0
 @export var player_health_current: float = player_health_max
+@export var player_base_damage_stat: float = 2.0
+@export var player_damage_stat: float = player_base_damage_stat
 
 var player_speed_current: float = 0.0
 @export var player_speed_walk_max: float = 6.0
@@ -42,7 +44,8 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var anim_player: AnimationPlayer = $starblade_wielder/AnimationPlayer
 @onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
-@onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/Wielder1_Sword2
+@onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/WielderSword
+@onready var weapon_hitbox: Area3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/WielderSword/HitboxArea
 @onready var target_icon: Sprite2D = $UI/TargetingIcon
 
 var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
@@ -77,6 +80,7 @@ func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
 	current_weapon.visible = false
+	weapon_hitbox.monitoring = false
 	
 	# viewport-relative scaling for UI elements
 	target_icon.scale = Vector2(viewport_width * 0.00005, viewport_width * 0.00005)
@@ -593,6 +597,7 @@ func handle_weapon_actions(event) -> void:
 				movement_state = PlayerMovementState.ATTACK
 				anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 				current_weapon.visible = true
+				weapon_hitbox.monitoring = true
 				# swap to holding weapon animations
 				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
 				attack_combo_stage += 1
@@ -668,12 +673,13 @@ func _on_animation_tree_animation_finished(anim_name):
 			attack_combo_stage = 0
 			# start timer again so that there is a buffer between when combat ends and when weapon vanishes
 			vanish_timer.start(vanish_timer_duration)
+			weapon_hitbox.monitoring = false
 		
 		# always set back to false so that future combo animations don't play automatically.
 		continue_attack_chain = false
 
 
-func _on_overlap_area_body_shape_entered(body_rid, body, body_shape_index, local_shape_index):
+func _on_overlap_area_body_shape_entered(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int):
 	# if this is the first overlapping object, auto-target it (make this a setting later to decide if this is default behavior).
 	if overlapping_objects.is_empty():
 		overlapping_objects.push_back(body)
@@ -685,10 +691,10 @@ func _on_overlap_area_body_shape_entered(body_rid, body, body_shape_index, local
 	else:
 		overlapping_objects.push_back(body)
 	
-	print(overlapping_objects)
+	#print(overlapping_objects)
 
 
-func _on_overlap_area_body_shape_exited(body_rid, body, body_shape_index, local_shape_index):
+func _on_overlap_area_body_shape_exited(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int):
 	# remove any body that leaves.
 	overlapping_objects.erase(body)
 	
@@ -702,7 +708,7 @@ func _on_overlap_area_body_shape_exited(body_rid, body, body_shape_index, local_
 		sort_objects_by_distance()
 		targeted_object = overlapping_objects[0]
 		
-	print(overlapping_objects)
+	#print(overlapping_objects)
 
 
 func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
@@ -720,6 +726,18 @@ func _on_vanish_timer_timeout() -> void:
 	print("vanish")
 	current_weapon.visible = false
 	blending_weapon_state = true
+
+
+func _on_sword_hitbox_area_body_entered(body: Node3D):
+	if body is Enemy:
+		# hit the enemy and trigger its i-frames if it is not already in i-frames.
+		if body.i_frames.is_stopped():
+			body.enemy_health_current -= player_damage_stat
+			body.enemy_health_current = clamp(body.enemy_health_current, 0.0, body.enemy_health_max)
+			
+			print(body.enemy_health_current)
+			body.i_frames.wait_time = body.i_frames_in_sec
+			body.i_frames.start()
 
 
 ### HELPER FUNCTIONS
