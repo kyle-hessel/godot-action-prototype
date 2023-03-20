@@ -4,6 +4,8 @@ class_name EnemyDefault
 
 @export var enemy_health_max: float = 20.0
 @export var enemy_health_current: float = enemy_health_max
+@export var enemy_normal_damage_stat: float = 3.0
+@export var enemy_special_damage_stat: float = enemy_normal_damage_stat * 2.0
 
 var enemy_speed: float = 5.0
 @export var enemy_rotation_rate: float = 7.0
@@ -139,11 +141,18 @@ func handle_attack_state(delta: float) -> void:
 			# if not, replace with - if combat_cast.collision_result[0]["collider"]:
 			# also change combat_cast.max_results to a lower value if SP only, at 4 right now.
 			for col in combat_cast.collision_result:
-				# **** REMOVE later. only players should be in this array anyway, leaving in case of error during dev.
+				# **** remove later? only players should end up in this array anyway, leaving in case of error during dev.
 				if col["collider"] is Player:
-					hit_registered = true
-					print("HIT")
-				else: print("Not a player.")
+					# if player does not have i-frames, do damage and begin i-frames.
+					if col["collider"].i_frames.is_stopped():
+						hit_registered = true
+						col["collider"].player_health_current -= enemy_normal_damage_stat
+						col["collider"].player_health_current = clamp(col["collider"].player_health_current, 0.0, col["collider"].player_health_max)
+						print(col["collider"].player_health_current)
+						
+						col["collider"].i_frames.start()
+						
+				else: print("Not a player.") # temp error handling, see above
 
 
 func handle_guard_state(delta: float) -> void:

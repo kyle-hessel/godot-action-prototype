@@ -4,7 +4,7 @@ class_name Player
 
 @export var player_health_max: float = 50.0
 @export var player_health_current: float = player_health_max
-@export var player_base_damage_stat: float = 2.0
+@export var player_base_damage_stat: float = 3.0
 @export var player_damage_stat: float = player_base_damage_stat
 
 var player_speed_current: float = 0.0
@@ -44,6 +44,7 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var anim_player: AnimationPlayer = $starblade_wielder/AnimationPlayer
 @onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
 @onready var vanish_timer: Timer = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/VanishTimer
+@onready var i_frames: Timer = $InvincibilityTimer
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/WielderSword
 @onready var weapon_hitbox: Area3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/WielderSword/HitboxArea
 @onready var target_icon: Sprite2D = $UI/TargetingIcon
@@ -730,12 +731,12 @@ func _on_vanish_timer_timeout() -> void:
 
 func _on_sword_hitbox_area_body_entered(body: Node3D):
 	if body is Enemy:
-		# hit the enemy and trigger its i-frames if it is not already in i-frames.
+		# if enemy does not have i-frames, do damage and begin i-frames.
 		if body.i_frames.is_stopped():
 			body.enemy_health_current -= player_damage_stat
 			body.enemy_health_current = clamp(body.enemy_health_current, 0.0, body.enemy_health_max)
-			
 			print(body.enemy_health_current)
+			
 			body.i_frames.wait_time = body.i_frames_in_sec
 			body.i_frames.start()
 
