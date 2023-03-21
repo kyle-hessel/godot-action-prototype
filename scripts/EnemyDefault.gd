@@ -7,7 +7,8 @@ class_name EnemyDefault
 @export var enemy_normal_damage_stat: float = 3.0
 @export var enemy_special_damage_stat: float = enemy_normal_damage_stat * 2.0
 
-var enemy_speed: float = 5.0
+@export var enemy_speed: float = 5.0
+@export var enemy_decel_rate: float = 16.0
 @export var enemy_rotation_rate: float = 7.0
 @export var root_motion_multiplier: int = 3000
 var guard_player_distance: float = 32.0
@@ -29,6 +30,10 @@ var hit_registered: bool = false
 var nearby_allies: Array[Node3D]
 var nearby_players: Array[Node3D]
 var targeted_player: Node3D = null
+
+# Get the gravity from the project settings to be synced with RigidBody nodes.
+var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+@export var gravity_multiplier: float = 1.0
 
 enum EnemyMovementState {
 	IDLE = 0,
@@ -82,13 +87,17 @@ func _physics_process(delta: float) -> void:
 			handle_attack_state(delta)
 		
 		elif movement_state == EnemyMovementState.DAMAGED:
-			if !$GuardTimer.is_stopped():
-				$GuardTimer.stop()
+			handle_damaged_state(delta)
 			
 	# if there's no player, just be still. (add roaming here later)
 	else:
 		movement_state = EnemyMovementState.IDLE
 		velocity = Vector3.ZERO
+
+
+func apply_only_gravity(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y -= gravity * gravity_multiplier * delta
 
 
 # navigates to a player, relying on target_pos (updated from update_nav_target_pos)
@@ -165,11 +174,22 @@ func handle_attack_state(delta: float) -> void:
 
 
 func handle_guard_state(delta: float) -> void:
+	if velocity != Vector3.ZERO:
+		velocity = velocity.move_toward(Vector3.ZERO, enemy_decel_rate * delta)
+	
 	if $GuardTimer.is_stopped():
 		start_guard_timer()
 			
 	# face the player smoothly
 	rotate_enemy_tracking(delta)
+
+
+func handle_damaged_state(delta: float) -> void:
+	if !$GuardTimer.is_stopped():
+		$GuardTimer.stop()
+		
+	handle_root_motion(delta, root_motion_multiplier * 0.25)
+	move_and_slide()
 
 
 func rotate_enemy_tracking(delta: float) -> void:
@@ -187,6 +207,10 @@ func handle_root_motion(delta: float, rm_multiplier: float) -> void:
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
 	velocity += root_motion * rm_multiplier * delta
+	
+	# still add gravity if not on floor
+	apply_only_gravity(delta)
+	print("wtf")
 
 
 # when enemy gets within a set distance to the target (player), switch to guard state.
@@ -256,6 +280,7 @@ func _on_animation_tree_animation_finished(anim_name):
 	elif movement_state == EnemyMovementState.DAMAGED:
 		if targeted_player != null:
 			if anim_name == "TakeDamage1":
+				#velocity = Vector3.ZERO
 				var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 				if to_player.length_squared() > guard_player_distance:
 					movement_state = EnemyMovementState.TRACK
