@@ -32,7 +32,7 @@ var jumps_remaining: int = max_jumps
 var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
-var current_attack_anim: String
+var current_oneshot_anim: String
 var attack_anim_damage_cutoff: float = 0.2
 var targeting: bool = false
 var tracking: bool = false
@@ -41,6 +41,7 @@ var tracking: bool = false
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var gravity_multiplier: float = 1.0
 
+@onready var player_mesh: Node3D = $starblade_wielder
 @onready var player_cam: Camera3D = $SpringArm3D/PlayerCam
 @onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
 @onready var anim_player: AnimationPlayer = $starblade_wielder/AnimationPlayer
@@ -608,7 +609,7 @@ func handle_weapon_actions(event) -> void:
 				if movement_state != PlayerMovementState.ATTACK:
 					movement_state = PlayerMovementState.ATTACK
 					anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-					current_attack_anim = "AttackGroundShot1"
+					current_oneshot_anim = "AttackGroundShot1"
 					current_weapon.visible = true
 					weapon_hitbox.monitoring = true
 					# swap to holding weapon animations
@@ -675,12 +676,12 @@ func _on_animation_tree_animation_finished(anim_name):
 			if anim_name == "AttackComboGround1":
 				attack_combo_stage += 1
 				anim_tree.set("parameters/AttackGroundShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_attack_anim = "AttackGroundShot2"
+				current_oneshot_anim = "AttackGroundShot2"
 				
 			elif anim_name == "AttackComboGround2":
 				attack_combo_stage += 1
 				anim_tree.set("parameters/AttackGroundShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_attack_anim = "AttackGroundShot3"
+				current_oneshot_anim = "AttackGroundShot3"
 			
 		# if combo is ending, reset player state.
 		else:
@@ -752,11 +753,11 @@ func _on_vanish_timer_timeout() -> void:
 func _on_sword_hitbox_area_body_entered(body: Node3D):
 	if movement_state == PlayerMovementState.ATTACK:
 		if body is Enemy:
-			var attack_anim_string: String = "parameters/" + current_attack_anim + "/time"
-			var anim_duration: float = anim_tree.get(attack_anim_string)
+			var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+			var anim_progress: float = anim_tree.get(attack_anim_string)
 			
 			# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
-			if body.i_frames.is_stopped() && anim_duration > attack_anim_damage_cutoff:
+			if body.i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
 				# damage enemy, change their state to damaged.
 				body.enemy_health_current -= player_damage_stat
 				body.enemy_health_current = clamp(body.enemy_health_current, 0.0, body.enemy_health_max)

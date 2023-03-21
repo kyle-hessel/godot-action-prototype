@@ -63,7 +63,7 @@ func _physics_process(delta: float) -> void:
 	if targeted_player != null:
 		# if we are tracking, follow the player.
 		if movement_state == EnemyMovementState.TRACK:
-			
+			# for whatever reason none of this logic works if abstracted into another function.
 			if !$GuardTimer.is_stopped():
 				$GuardTimer.stop()
 				
@@ -145,7 +145,7 @@ func handle_attack_state(delta: float) -> void:
 				# if not, replace with - if combat_cast.collision_result[0]["collider"]:
 				# also change combat_cast.max_results to a lower value if SP only, at 4 right now.
 				for col in combat_cast.collision_result:
-					# **** remove later? only players should end up in this array anyway, leaving in case of error during dev.
+					# **** remove this check later? only players should end up in this array anyway, leaving in case of future error.
 					if col["collider"] is Player:
 						# if player does not have i-frames, do damage and begin i-frames.
 						if col["collider"].i_frames.is_stopped():
@@ -153,9 +153,10 @@ func handle_attack_state(delta: float) -> void:
 							col["collider"].player_health_current -= enemy_normal_damage_stat
 							col["collider"].player_health_current = clamp(col["collider"].player_health_current, 0.0, col["collider"].player_health_max)
 							
-							# cancel out any existing attack animation if there is one.
+							# cancel out any existing oneshot animation on the player if it exists.
+							# *** this if check will probably need to be modified.
 							if col["collider"].movement_state == col["collider"].PlayerMovementState.ATTACK:
-								var player_attack_anim: String = "parameters/" + col["collider"].current_attack_anim + "/request"
+								var player_attack_anim: String = "parameters/" + col["collider"].current_oneshot_anim + "/request"
 								col["collider"].anim_tree.set(player_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
 							
 							# switch the given player's movement state to damage, play damage anim.
@@ -166,6 +167,22 @@ func handle_attack_state(delta: float) -> void:
 							
 							# start player's i-frames.
 							col["collider"].i_frames.start()
+							
+							# hit direction determination sample. example & WIP.
+							var player_forward_vector: Vector3 = col["collider"].player_mesh.transform.basis.z * -1.0
+							
+							var angle_diff_z: float = rad_to_deg(player_forward_vector.signed_angle_to($EnemyMesh.transform.basis.z * -1.0, Vector3.UP))
+							print("forward to forward diff: ", angle_diff_z)
+							
+							if angle_diff_z < 45.0 && angle_diff_z >= -45.0:
+								print("hit from behind.")
+							elif angle_diff_z < -45.0 && angle_diff_z >= -135.0:
+								print("hit from left.")
+							elif angle_diff_z < 135.0 && angle_diff_z >= 45.0:
+								print("hit from right.")
+							elif angle_diff_z >= 135.0 || angle_diff_z < -135.0:
+								print("hit from front.")
+								
 							
 					else: print("Not a player.") # temp error handling, see above
 
