@@ -13,8 +13,8 @@ var enemy_speed: float = 5.0
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
-@onready var i_frames_in_sec: float = 0.25
-@export var wait_time_floor: float = 0.75
+@onready var i_frames_in_sec: float = 0.4
+@export var wait_time_floor: float = 1.0
 @export var wait_time_ceiling: float = 2.0
 var hit_registered: bool = false
 
@@ -61,8 +61,8 @@ func _physics_process(delta: float) -> void:
 	anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
 	# if there is a player, do something
 	if targeted_player != null:
-		# if we aren't on guard or attacking, navigate.
-		if movement_state != EnemyMovementState.GUARD && movement_state != EnemyMovementState.ATTACK:
+		# if we are tracking, follow the player.
+		if movement_state == EnemyMovementState.TRACK:
 			
 			if !$GuardTimer.is_stopped():
 				$GuardTimer.stop()
@@ -73,11 +73,15 @@ func _physics_process(delta: float) -> void:
 			rotate_enemy_tracking(delta)
 			
 		# if guarding, periodically check what the player is doing.
-		if movement_state == EnemyMovementState.GUARD:
+		elif movement_state == EnemyMovementState.GUARD:
 			handle_guard_state(delta)
 		
 		elif movement_state == EnemyMovementState.ATTACK:
 			handle_attack_state(delta)
+		
+		elif movement_state == EnemyMovementState.DAMAGED:
+			if !$GuardTimer.is_stopped():
+				$GuardTimer.stop()
 			
 	# if there's no player, just be still. (add roaming here later)
 	else:
@@ -88,7 +92,6 @@ func _physics_process(delta: float) -> void:
 # navigates to a player, relying on target_pos (updated from update_nav_target_pos)
 func execute_nav(delta: float, modifier: float = 120.0) -> void:
 	var new_velocity: Vector3
-	movement_state = EnemyMovementState.TRACK
 	
 	# only navigate if the target can be reached.
 	if nav_agent.is_target_reachable():
@@ -132,27 +135,39 @@ func handle_attack_state(delta: float) -> void:
 	handle_root_motion(delta)
 	move_and_slide()
 			
-	# damage player, WIP
-	if combat_cast.is_colliding():
-		if !hit_registered:
-			#print(combat_cast.collision_result)
-			#print(combat_cast.get_collision_count())
-			# leaving this a for loop for now, in case of potential multiplayer later.
-			# if not, replace with - if combat_cast.collision_result[0]["collider"]:
-			# also change combat_cast.max_results to a lower value if SP only, at 4 right now.
-			for col in combat_cast.collision_result:
-				# **** remove later? only players should end up in this array anyway, leaving in case of error during dev.
-				if col["collider"] is Player:
-					# if player does not have i-frames, do damage and begin i-frames.
-					if col["collider"].i_frames.is_stopped():
-						hit_registered = true
-						col["collider"].player_health_current -= enemy_normal_damage_stat
-						col["collider"].player_health_current = clamp(col["collider"].player_health_current, 0.0, col["collider"].player_health_max)
-						print(col["collider"].player_health_current)
-						
-						col["collider"].i_frames.start()
-						
-				else: print("Not a player.") # temp error handling, see above
+	if movement_state == EnemyMovementState.ATTACK:
+		# damage player, WIP
+		if combat_cast.is_colliding():
+			if !hit_registered:
+				#print(combat_cast.collision_result)
+				#print(combat_cast.get_collision_count())
+				# leaving this a for loop for now, in case of potential multiplayer later.
+				# if not, replace with - if combat_cast.collision_result[0]["collider"]:
+				# also change combat_cast.max_results to a lower value if SP only, at 4 right now.
+				for col in combat_cast.collision_result:
+					# **** remove later? only players should end up in this array anyway, leaving in case of error during dev.
+					if col["collider"] is Player:
+						# if player does not have i-frames, do damage and begin i-frames.
+						if col["collider"].i_frames.is_stopped():
+							hit_registered = true
+							col["collider"].player_health_current -= enemy_normal_damage_stat
+							col["collider"].player_health_current = clamp(col["collider"].player_health_current, 0.0, col["collider"].player_health_max)
+							
+							# cancel out any existing attack animation if there is one.
+							if col["collider"].movement_state == col["collider"].PlayerMovementState.ATTACK:
+								var player_attack_anim: String = "parameters/" + col["collider"].current_attack_anim + "/request"
+								col["collider"].anim_tree.set(player_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+							
+							# switch the given player's movement state to damage, play damage anim.
+							col["collider"].movement_state = col["collider"].PlayerMovementState.DAMAGED
+							col["collider"].anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+							
+							print("Player hurt! Health: ", col["collider"].player_health_current)
+							
+							# start player's i-frames.
+							col["collider"].i_frames.start()
+							
+					else: print("Not a player.") # temp error handling, see above
 
 
 func handle_guard_state(delta: float) -> void:
@@ -199,7 +214,7 @@ func _on_guard_timer_timeout():
 	if targeted_player != null:
 		# if the player gets too far away, resume tracking
 		var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
-		if (to_player.length_squared() > guard_player_distance):
+		if to_player.length_squared() > guard_player_distance:
 			movement_state = EnemyMovementState.TRACK
 		# if the player is in range, attack!
 		else:
@@ -213,6 +228,18 @@ func _on_animation_tree_animation_finished(anim_name):
 		if anim_name == "EnemyAttack1":
 			movement_state = EnemyMovementState.TRACK
 			combat_cast.enabled = false
+	
+	# if ending taking damage, resume track or guard state if we have a player still, and idle if not.
+	elif movement_state == EnemyMovementState.DAMAGED:
+		if targeted_player != null:
+			if anim_name == "TakeDamage1":
+				var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
+				if to_player.length_squared() > guard_player_distance:
+					movement_state = EnemyMovementState.TRACK
+				else:
+					movement_state = EnemyMovementState.GUARD
+		else:
+			movement_state = EnemyMovementState.IDLE
 
 
 func _on_overlap_area_body_entered(body: Node3D):
@@ -222,6 +249,10 @@ func _on_overlap_area_body_entered(body: Node3D):
 			targeted_player = body
 		else:
 			nearby_players.push_back(body)
+		
+		# if idling or roaming when a player comes into periphery, track them.
+		if movement_state == EnemyMovementState.IDLE || movement_state == EnemyMovementState.ROAMING:
+			movement_state = EnemyMovementState.TRACK
 			
 	elif body is Enemy:
 		# don't be aware of self, of course. necessary because of collision layer junk.

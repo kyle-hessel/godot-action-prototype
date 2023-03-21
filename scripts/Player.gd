@@ -32,6 +32,8 @@ var jumps_remaining: int = max_jumps
 var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
+var current_attack_anim: String
+var attack_anim_damage_cutoff: float = 0.2
 var targeting: bool = false
 var tracking: bool = false
 
@@ -144,15 +146,18 @@ func _input(event):
 
 # determine if player rotates relative to the camera or relative to an enemy or object.
 func determine_player_rotation(delta: float) -> void:
-	if movement_state != PlayerMovementState.ATTACK:
+	if movement_state != PlayerMovementState.ATTACK && movement_state != PlayerMovementState.DAMAGED:
 		# normal directional lerp to match camera rotation
 		if has_direction:
 			rotate_player_movement(delta)
 	else:
-		# combat directional lerp to face enemy when attacking
-		if targeted_object != null && targeting:
-			# only rotate to match enemy if not extremely close to them
-			rotate_player_combat(delta)
+		if movement_state == PlayerMovementState.ATTACK:
+			# combat directional lerp to face enemy when attacking
+			if targeted_object != null && targeting:
+				# only rotate to match enemy if not extremely close to them
+				rotate_player_combat(delta)
+		elif movement_state == PlayerMovementState.DAMAGED:
+			pass
 
 
 func rotate_player_movement(delta: float) -> void:
@@ -225,17 +230,22 @@ func apply_only_gravity(delta: float) -> void:
 
 
 func determine_player_movement_state(delta: float) -> void:
-	# if not attacking, move normally
-	if movement_state != PlayerMovementState.ATTACK:
+	# if not attacking or taking damage, move normally
+	if movement_state != PlayerMovementState.ATTACK && movement_state != PlayerMovementState.DAMAGED:
 		# gravity, then jumping, in that order
 		apply_jump_and_gravity(delta)
 		# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
 		calculate_player_lateral_movement(delta)
 		
-	# if attacking, calculate movement w/ root motion
 	else:
-		player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
-		handle_root_motion(delta)
+		# if attacking, calculate movement w/ root motion
+		if movement_state == PlayerMovementState.ATTACK:
+			player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+			handle_root_motion(delta)
+			
+		# if taking damage, reset attack combo, etc.
+		elif movement_state == PlayerMovementState.DAMAGED:
+			attack_combo_stage = 0
 
 
 func calculate_player_lateral_movement(delta: float) -> void:
@@ -590,47 +600,49 @@ func rotate_cam_joypad(delta: float) -> void:
 	
 
 func handle_weapon_actions(event) -> void:
-	if event.is_action_pressed("attack"):
-		# grounded attacks
-		if is_on_floor():
-			# only begin first animation if not already in ATTACK state.
-			if movement_state != PlayerMovementState.ATTACK:
-				movement_state = PlayerMovementState.ATTACK
-				anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_weapon.visible = true
-				weapon_hitbox.monitoring = true
-				# swap to holding weapon animations
-				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
-				attack_combo_stage += 1
-			# if already attacking, determine if the attack combo is continued.
+	if movement_state != PlayerMovementState.DAMAGED:
+		if event.is_action_pressed("attack"):
+			# grounded attacks
+			if is_on_floor():
+				# only begin first animation if not already in ATTACK state.
+				if movement_state != PlayerMovementState.ATTACK:
+					movement_state = PlayerMovementState.ATTACK
+					anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+					current_attack_anim = "AttackGroundShot1"
+					current_weapon.visible = true
+					weapon_hitbox.monitoring = true
+					# swap to holding weapon animations
+					weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+					attack_combo_stage += 1
+				# if already attacking, determine if the attack combo is continued.
+				else:
+					match attack_combo_stage:
+						1:
+							var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
+							if anim_duration >= 0.2 && anim_duration <= 0.7:
+								continue_attack_chain = true
+								vanish_timer.start(vanish_timer_duration)
+						2:
+							var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
+							if anim_duration > 0.3 && anim_duration < 0.85:
+								continue_attack_chain = true
+								vanish_timer.start(vanish_timer_duration)
+			# midair attacks
 			else:
-				match attack_combo_stage:
-					1:
-						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
-						if anim_duration >= 0.2 && anim_duration <= 0.7:
-							continue_attack_chain = true
-							vanish_timer.start(vanish_timer_duration)
-					2:
-						var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
-						if anim_duration > 0.3 && anim_duration < 0.8:
-							continue_attack_chain = true
-							vanish_timer.start(vanish_timer_duration)
-		# midair attacks
-		else:
-			if movement_state != PlayerMovementState.ATTACK:
-#				movement_state = PlayerMovementState.ATTACK
-#				anim_tree.set("parameters/AttackMidairShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-#				current_weapon.visible = true
-				# swap to holding weapon animations
-#				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
-#				attack_combo_stage += 1
-				pass
-			else:
-				match attack_combo_stage:
-					1:
-						pass
-					2:
-						pass
+				if movement_state != PlayerMovementState.ATTACK:
+	#				movement_state = PlayerMovementState.ATTACK
+	#				anim_tree.set("parameters/AttackMidairShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	#				current_weapon.visible = true
+					# swap to holding weapon animations
+	#				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+	#				attack_combo_stage += 1
+					pass
+				else:
+					match attack_combo_stage:
+						1:
+							pass
+						2:
+							pass
 	
 
 # organize array of overlapping objects by distance, closest to farthest.
@@ -663,10 +675,12 @@ func _on_animation_tree_animation_finished(anim_name):
 			if anim_name == "AttackComboGround1":
 				attack_combo_stage += 1
 				anim_tree.set("parameters/AttackGroundShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				current_attack_anim = "AttackGroundShot2"
 				
 			elif anim_name == "AttackComboGround2":
 				attack_combo_stage += 1
 				anim_tree.set("parameters/AttackGroundShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				current_attack_anim = "AttackGroundShot3"
 			
 		# if combo is ending, reset player state.
 		else:
@@ -678,6 +692,11 @@ func _on_animation_tree_animation_finished(anim_name):
 		
 		# always set back to false so that future combo animations don't play automatically.
 		continue_attack_chain = false
+		
+	# when damage animation ends, resume normal movement states
+	elif movement_state == PlayerMovementState.DAMAGED:
+		if anim_name == "extra_anims/TakeDamage1":
+			movement_state = PlayerMovementState.IDLE
 
 
 func _on_overlap_area_body_shape_entered(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int):
@@ -729,16 +748,30 @@ func _on_vanish_timer_timeout() -> void:
 	blending_weapon_state = true
 
 
+# hit registration on enemies
 func _on_sword_hitbox_area_body_entered(body: Node3D):
-	if body is Enemy:
-		# if enemy does not have i-frames, do damage and begin i-frames.
-		if body.i_frames.is_stopped():
-			body.enemy_health_current -= player_damage_stat
-			body.enemy_health_current = clamp(body.enemy_health_current, 0.0, body.enemy_health_max)
-			print(body.enemy_health_current)
+	if movement_state == PlayerMovementState.ATTACK:
+		if body is Enemy:
+			var attack_anim_string: String = "parameters/" + current_attack_anim + "/time"
+			var anim_duration: float = anim_tree.get(attack_anim_string)
 			
-			body.i_frames.wait_time = body.i_frames_in_sec
-			body.i_frames.start()
+			# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
+			if body.i_frames.is_stopped() && anim_duration > attack_anim_damage_cutoff:
+				# damage enemy, change their state to damaged.
+				body.enemy_health_current -= player_damage_stat
+				body.enemy_health_current = clamp(body.enemy_health_current, 0.0, body.enemy_health_max)
+				body.movement_state = body.EnemyMovementState.DAMAGED
+				# determine which hit animation enemy plays. move damage into this as well later so that it varies.
+				if attack_combo_stage > 2:
+					body.anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				else:
+					body.anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+					
+				print("Enemy hurt! health: ", body.enemy_health_current)
+				
+				# begin enemy's i-frames.
+				body.i_frames.wait_time = body.i_frames_in_sec
+				body.i_frames.start()
 
 
 ### HELPER FUNCTIONS
