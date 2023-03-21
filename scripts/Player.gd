@@ -847,3 +847,18 @@ func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -
 	var origin: Vector3 = obj.global_transform.origin
 	facing_object_from_pos_lerp(obj, origin, target, up, delta)
 
+# returns front, back, left, or right. 
+func find_relative_direction(from: Vector3, to: Vector3) -> String:
+	var angle_diff: float = rad_to_deg(from.signed_angle_to(to, Vector3.UP))
+	#print("angle diff: ", angle_diff)
+							
+	if angle_diff < 45.0 && angle_diff >= -45.0:
+		return "back"
+	elif angle_diff < -45.0 && angle_diff >= -135.0:
+		return "left"
+	elif angle_diff < 135.0 && angle_diff >= 45.0:
+		return "right"
+	elif angle_diff >= 135.0 || angle_diff < -135.0:
+		return "front"
+	else:
+		return "?"

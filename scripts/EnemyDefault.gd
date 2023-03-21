@@ -170,18 +170,19 @@ func handle_attack_state(delta: float) -> void:
 							
 							# hit direction determination sample. example & WIP.
 							var player_forward_vector: Vector3 = col["collider"].player_mesh.transform.basis.z * -1.0
+							var hit_from: String = find_relative_direction(player_forward_vector, $EnemyMesh.transform.basis.z * -1.0)
 							
-							var angle_diff_z: float = rad_to_deg(player_forward_vector.signed_angle_to($EnemyMesh.transform.basis.z * -1.0, Vector3.UP))
-							print("forward to forward diff: ", angle_diff_z)
-							
-							if angle_diff_z < 45.0 && angle_diff_z >= -45.0:
-								print("hit from behind.")
-							elif angle_diff_z < -45.0 && angle_diff_z >= -135.0:
-								print("hit from left.")
-							elif angle_diff_z < 135.0 && angle_diff_z >= 45.0:
-								print("hit from right.")
-							elif angle_diff_z >= 135.0 || angle_diff_z < -135.0:
-								print("hit from front.")
+							match hit_from:
+								"front":
+									print("hit from front.")
+								"back":
+									print("hit from behind.")
+								"right":
+									print("hit from right.")
+								"left":
+									print("hit from left.")
+								_:
+									print("hit from ???")
 								
 							
 					else: print("Not a player.") # temp error handling, see above
@@ -326,3 +327,18 @@ func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -
 	var origin: Vector3 = obj.global_transform.origin
 	facing_object_from_pos_lerp(obj, origin, target, up, delta)
 
+# returns front, back, left, or right. 
+func find_relative_direction(from: Vector3, to: Vector3) -> String:
+	var angle_diff: float = rad_to_deg(from.signed_angle_to(to, Vector3.UP))
+	#print("angle diff: ", angle_diff)
+							
+	if angle_diff < 45.0 && angle_diff >= -45.0:
+		return "back"
+	elif angle_diff < -45.0 && angle_diff >= -135.0:
+		return "left"
+	elif angle_diff < 135.0 && angle_diff >= 45.0:
+		return "right"
+	elif angle_diff >= 135.0 || angle_diff < -135.0:
+		return "front"
+	else:
+		return "?"
