@@ -14,8 +14,10 @@ var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
 @onready var i_frames_in_sec: float = 0.4
-@export var wait_time_floor: float = 1.0
-@export var wait_time_ceiling: float = 2.0
+@export var wait_time_floor: float = 1.5
+@export var wait_time_ceiling: float = 3.0
+var current_oneshot_anim: String
+var attack_anim_damage_cutoff: float = 0.2
 var hit_registered: bool = false
 
 @onready var anim_tree : AnimationTree = $AnimationTree
@@ -127,6 +129,7 @@ func begin_attack() -> void:
 	movement_state = EnemyMovementState.ATTACK
 	combat_cast.enabled = true
 	anim_tree.set("parameters/AttackShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	current_oneshot_anim = "AttackShot1"
 	$GuardTimer.stop()
 
 
@@ -147,8 +150,11 @@ func handle_attack_state(delta: float) -> void:
 				for col in combat_cast.collision_result:
 					# **** remove this check later? only players should end up in this array anyway, leaving in case of future error.
 					if col["collider"] is Player:
+						var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+						var anim_progress: float = anim_tree.get(attack_anim_string)
+						
 						# if player does not have i-frames, do damage and begin i-frames.
-						if col["collider"].i_frames.is_stopped():
+						if col["collider"].i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
 							hit_registered = true
 							col["collider"].player_health_current -= enemy_normal_damage_stat
 							col["collider"].player_health_current = clamp(col["collider"].player_health_current, 0.0, col["collider"].player_health_max)
@@ -327,7 +333,7 @@ func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -
 	var origin: Vector3 = obj.global_transform.origin
 	facing_object_from_pos_lerp(obj, origin, target, up, delta)
 
-# returns front, back, left, or right. 
+# returns front, back, left, or right.
 func find_relative_direction(from: Vector3, to: Vector3) -> String:
 	var angle_diff: float = rad_to_deg(from.signed_angle_to(to, Vector3.UP))
 	#print("angle diff: ", angle_diff)
