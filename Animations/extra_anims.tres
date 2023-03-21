@@ -1,0 +1,24 @@
+[gd_resource type="AnimationLibrary" load_steps=10 format=3 uid="uid://cnlqrfubu6xh0"]
+
+[ext_resource type="Animation" uid="uid://caei84638isnj" path="res://Animations/DoubleJump.res" id="1_f5h1h"]
+[ext_resource type="Animation" uid="uid://lp34v2scw3q1" path="res://Animations/wielder_idleweapon.res" id="2_c0uag"]
+[ext_resource type="Animation" uid="uid://ci1qxp8l6acm0" path="res://Animations/wielder_runweapon.res" id="3_dksl4"]
+[ext_resource type="Animation" uid="uid://3twkqm2g2f70" path="res://Animations/wielder_takedamage1.res" id="4_fqne3"]
+[ext_resource type="Animation" uid="uid://dfk4b31vii1oo" path="res://Animations/wielder_walkweapon.res" id="5_p6nfy"]
+[ext_resource type="Animation" uid="uid://chl5gebqm8wkl" path="res://Animations/wielder_takedamage_back.res" id="6_mlpkv"]
+[ext_resource type="Animation" uid="uid://do2u04ciqrtya" path="res://Animations/wielder_takedamage_front.res" id="7_b1up6"]
+[ext_resource type="Animation" uid="uid://do6ew2ltworep" path="res://Animations/wielder_takedamage_left.res" id="8_72ya2"]
+[ext_resource type="Animation" uid="uid://polalic2v2hs" path="res://Animations/wielder_takedamage_right.res" id="9_ku5ts"]
+
+[resource]
+_data = {
+"DoubleJump": ExtResource("1_f5h1h"),
+"IdleWeapon": ExtResource("2_c0uag"),
+"RunWeapon": ExtResource("3_dksl4"),
+"TakeDamage1": ExtResource("4_fqne3"),
+"TakeDamageBack": ExtResource("6_mlpkv"),
+"TakeDamageFront": ExtResource("7_b1up6"),
+"TakeDamageLeft": ExtResource("8_72ya2"),
+"TakeDamageRight": ExtResource("9_ku5ts"),
+"WalkWeapon": ExtResource("5_p6nfy")
+}

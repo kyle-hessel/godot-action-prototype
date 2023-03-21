@@ -241,12 +241,11 @@ func determine_player_movement_state(delta: float) -> void:
 	else:
 		# if attacking, calculate movement w/ root motion
 		if movement_state == PlayerMovementState.ATTACK:
-			player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
-			handle_root_motion(delta)
+			handle_root_motion(delta, root_motion_multiplier)
 			
-		# if taking damage, reset attack combo, etc.
+		# if taking damage, reset attack combo, calculate movement w/ root motion
 		elif movement_state == PlayerMovementState.DAMAGED:
-			attack_combo_stage = 0
+			handle_root_motion(delta, root_motion_multiplier * 0.0125)
 
 
 func calculate_player_lateral_movement(delta: float) -> void:
@@ -364,14 +363,14 @@ func stop_player_movement(delta: float) -> void:
 
 
 # determine how to move when applying root motion.
-func handle_root_motion(delta: float) -> void:
+func handle_root_motion(delta: float, rm_multiplier: float) -> void:
 	has_direction = false # ensure no added rotation movement lerping while attacking
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
 	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $starblade_wielder.rotation.y)
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-	velocity += root_motion * root_motion_multiplier * delta
+	velocity += root_motion * rm_multiplier * delta
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)
@@ -608,6 +607,8 @@ func handle_weapon_actions(event) -> void:
 				# only begin first animation if not already in ATTACK state.
 				if movement_state != PlayerMovementState.ATTACK:
 					movement_state = PlayerMovementState.ATTACK
+					player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+					
 					anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 					current_oneshot_anim = "AttackGroundShot1"
 					current_weapon.visible = true
@@ -625,19 +626,23 @@ func handle_weapon_actions(event) -> void:
 								vanish_timer.start(vanish_timer_duration)
 						2:
 							var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
-							if anim_duration > 0.3 && anim_duration < 0.85:
+							if anim_duration > 0.25 && anim_duration < 0.85:
 								continue_attack_chain = true
 								vanish_timer.start(vanish_timer_duration)
 			# midair attacks
 			else:
 				if movement_state != PlayerMovementState.ATTACK:
 	#				movement_state = PlayerMovementState.ATTACK
+	#				player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+	
 	#				anim_tree.set("parameters/AttackMidairShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	#				current_weapon.visible = true
+	#				weapon_hitbox.monitoring = true
 					# swap to holding weapon animations
 	#				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
 	#				attack_combo_stage += 1
 					pass
+				# if already attacking, determine if the attack combo is continued.
 				else:
 					match attack_combo_stage:
 						1:
@@ -696,7 +701,7 @@ func _on_animation_tree_animation_finished(anim_name):
 		
 	# when damage animation ends, resume normal movement states
 	elif movement_state == PlayerMovementState.DAMAGED:
-		if anim_name == "extra_anims/TakeDamage1":
+		if anim_name == "extra_anims/TakeDamageFront" || anim_name == "extra_anims/TakeDamageBack" || anim_name == "extra_anims/TakeDamageLeft" || anim_name == "extra_anims/TakeDamageRight":
 			movement_state = PlayerMovementState.IDLE
 
 
@@ -758,21 +763,53 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 			
 			# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
 			if body.i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
-				# damage enemy, change their state to damaged.
-				body.enemy_health_current -= player_damage_stat
-				body.enemy_health_current = clamp(body.enemy_health_current, 0.0, body.enemy_health_max)
-				body.movement_state = body.EnemyMovementState.DAMAGED
-				# determine which hit animation enemy plays. move damage into this as well later so that it varies.
-				if attack_combo_stage > 2:
-					body.anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				else:
-					body.anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-					
-				print("Enemy hurt! health: ", body.enemy_health_current)
-				
-				# begin enemy's i-frames.
-				body.i_frames.wait_time = body.i_frames_in_sec
-				body.i_frames.start()
+				# inflict damage on the enemy, let them handle the details.
+				body.take_damage(player_damage_stat, attack_combo_stage)
+
+
+func take_damage(amount: float, enemy_forward_vector: Vector3) -> void:
+	# take damage.
+	player_health_current -= amount
+	player_health_current = clamp(player_health_current, 0.0, player_health_max)
+	
+	# cancel out any existing oneshot animation on the player if it exists.
+	# *** this if check will probably need to be modified.
+	if movement_state == PlayerMovementState.ATTACK:
+		var player_attack_anim: String = "parameters/" + current_oneshot_anim + "/request"
+		anim_tree.set(player_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+		
+	# switch player state to damaged, reset some other stuff.
+	movement_state = PlayerMovementState.DAMAGED
+	weapon_hitbox.monitoring = false
+	player_speed_current = 0
+	attack_combo_stage = 0
+	
+	# determine the direction the player was hit from.
+	var player_forward_vector: Vector3 = $starblade_wielder.transform.basis.z * -1.0
+	var hit_from: String = find_relative_direction(player_forward_vector, enemy_forward_vector)
+	
+	# use hit direction and play the respective anim.
+	match hit_from:
+		"front":
+			anim_tree.set("parameters/TakeDamageFrontShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			current_oneshot_anim = "TakeDamageFrontShot"
+		"back":
+			anim_tree.set("parameters/TakeDamageBackShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			current_oneshot_anim = "TakeDamageBackShot"
+		"right":
+			anim_tree.set("parameters/TakeDamageRightShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			current_oneshot_anim = "TakeDamageRightShot"
+		"left":
+			anim_tree.set("parameters/TakeDamageLeftShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			current_oneshot_anim = "TakeDamageLeftShot"
+		_:
+			anim_tree.set("parameters/TakeDamageFrontShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			current_oneshot_anim = "TakeDamageFrontShot"
+	
+	print("Player hurt! Health: ", player_health_current)
+	
+	# start player's i-frames.
+	i_frames.start()
 
 
 ### HELPER FUNCTIONS

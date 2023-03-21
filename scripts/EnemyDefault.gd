@@ -17,7 +17,7 @@ var guard_time_rand: float
 @export var wait_time_floor: float = 1.5
 @export var wait_time_ceiling: float = 3.0
 var current_oneshot_anim: String
-var attack_anim_damage_cutoff: float = 0.2
+var attack_anim_damage_cutoff: float = 0.25
 var hit_registered: bool = false
 
 @onready var anim_tree : AnimationTree = $AnimationTree
@@ -135,7 +135,7 @@ func begin_attack() -> void:
 
 func handle_attack_state(delta: float) -> void:
 	# in attack state, drive velocity with root motion from anim.
-	handle_root_motion(delta)
+	handle_root_motion(delta, root_motion_multiplier)
 	move_and_slide()
 			
 	if movement_state == EnemyMovementState.ATTACK:
@@ -153,43 +153,13 @@ func handle_attack_state(delta: float) -> void:
 						var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
 						var anim_progress: float = anim_tree.get(attack_anim_string)
 						
-						# if player does not have i-frames, do damage and begin i-frames.
+						# only register hit if player has no i-frames and if enemy attack animation has properly ramped up.
 						if col["collider"].i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
 							hit_registered = true
-							col["collider"].player_health_current -= enemy_normal_damage_stat
-							col["collider"].player_health_current = clamp(col["collider"].player_health_current, 0.0, col["collider"].player_health_max)
 							
-							# cancel out any existing oneshot animation on the player if it exists.
-							# *** this if check will probably need to be modified.
-							if col["collider"].movement_state == col["collider"].PlayerMovementState.ATTACK:
-								var player_attack_anim: String = "parameters/" + col["collider"].current_oneshot_anim + "/request"
-								col["collider"].anim_tree.set(player_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+							# inflict damage on the player, let them handle the details.
+							col["collider"].take_damage(enemy_normal_damage_stat, $EnemyMesh.transform.basis.z * -1.0)
 							
-							# switch the given player's movement state to damage, play damage anim.
-							col["collider"].movement_state = col["collider"].PlayerMovementState.DAMAGED
-							col["collider"].anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-							
-							print("Player hurt! Health: ", col["collider"].player_health_current)
-							
-							# start player's i-frames.
-							col["collider"].i_frames.start()
-							
-							# hit direction determination sample. example & WIP.
-							var player_forward_vector: Vector3 = col["collider"].player_mesh.transform.basis.z * -1.0
-							var hit_from: String = find_relative_direction(player_forward_vector, $EnemyMesh.transform.basis.z * -1.0)
-							
-							match hit_from:
-								"front":
-									print("hit from front.")
-								"back":
-									print("hit from behind.")
-								"right":
-									print("hit from right.")
-								"left":
-									print("hit from left.")
-								_:
-									print("hit from ???")
-								
 							
 					else: print("Not a player.") # temp error handling, see above
 
@@ -210,13 +180,13 @@ func rotate_enemy_tracking(delta: float) -> void:
 
 
 # determine how to move when applying root motion.
-func handle_root_motion(delta: float) -> void:
+func handle_root_motion(delta: float, rm_multiplier: float) -> void:
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
 	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y)
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-	velocity += root_motion * root_motion_multiplier * delta
+	velocity += root_motion * rm_multiplier * delta
 
 
 # when enemy gets within a set distance to the target (player), switch to guard state.
@@ -243,6 +213,35 @@ func _on_guard_timer_timeout():
 		# if the player is in range, attack!
 		else:
 			begin_attack()
+
+
+func take_damage(amount: float, player_combo_stage: int) -> void:
+	# take damage.
+	enemy_health_current -= amount
+	enemy_health_current = clamp(enemy_health_current, 0.0, enemy_health_max)
+	
+	# cancel out any existing oneshot animation on the enemy if it exists.
+	# *** this if check will probably need to be modified.
+	if movement_state == EnemyMovementState.ATTACK:
+		var enemy_attack_anim: String = "parameters/" + current_oneshot_anim + "/request"
+		anim_tree.set(enemy_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+		
+	# switch enemy state to damaged.
+	movement_state = EnemyMovementState.DAMAGED
+	
+	# determine which hit animation enemy plays. move damage into this as well later so that it varies.
+	if player_combo_stage > 2:
+		anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+		current_oneshot_anim = "TakeDamageShot1"
+	else:
+		anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+		current_oneshot_anim = "TakeDamageShot1"
+	
+	print("Enemy hurt! health: ", enemy_health_current)
+	
+	# begin enemy's i-frames.
+	i_frames.wait_time = i_frames_in_sec
+	i_frames.start()
 
 
 func _on_animation_tree_animation_finished(anim_name):
