@@ -10,7 +10,7 @@ class_name EnemyDefault
 @export var enemy_speed: float = 5.0
 @export var enemy_decel_rate: float = 16.0
 @export var enemy_rotation_rate: float = 7.0
-@export var root_motion_multiplier: int = 27500
+@export var root_motion_multiplier: int = 22500
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
@@ -26,6 +26,7 @@ var hit_received: bool = false
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var combat_cast: ShapeCast3D = $EnemyMesh/CombatCast3D
+@onready var nearby_cast: RayCast3D = $EnemyMesh/NearbyCast3D
 @onready var i_frames: Timer = $InvincibilityTimer
 
 var nearby_allies: Array[Node3D]
@@ -62,10 +63,10 @@ func _ready() -> void:
 	rng.randomize()
 	combat_cast.enabled = false
 	combat_cast.add_exception($".") #'Exclude Parent' doesn't seem to work since combat_cast isn't a direct child of EnemyStarfiend, but instead its mesh.
+	nearby_cast.add_exception($".")
 
 
 func _physics_process(delta: float) -> void:
-	
 	#print(movement_state)
 	anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
 	# if there is a player, do something
@@ -92,6 +93,7 @@ func _physics_process(delta: float) -> void:
 		elif movement_state == EnemyMovementState.DAMAGED:
 			handle_damaged_state(delta)
 			
+		#print(movement_state)
 	# if there's no player, just be still. (add roaming here later)
 	else:
 		movement_state = EnemyMovementState.IDLE
@@ -148,7 +150,7 @@ func begin_attack() -> void:
 
 func handle_attack_state(delta: float) -> void:
 	# in attack state, drive velocity with root motion from anim.
-	handle_root_motion(delta, root_motion_multiplier * 2.5)
+	handle_root_motion(delta, root_motion_multiplier * 2.75)
 	move_and_slide()
 	
 	# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
@@ -180,8 +182,18 @@ func handle_attack_state(delta: float) -> void:
 
 
 func handle_guard_state(delta: float) -> void:
-	if velocity != Vector3.ZERO:
-		velocity = velocity.move_toward(Vector3.ZERO, enemy_decel_rate * delta)
+	# if the enemy is touching the player from the front while the player is attacking, slide them using the same root motion vector as the player, but increased.
+	# this makes combat feel much better when colliding with enemies, but it still isn't perfect.
+	if nearby_cast.is_colliding():
+		var player: CharacterBody3D = nearby_cast.get_collider()
+		if player.movement_state == player.PlayerMovementState.ATTACK:
+			var root_motion: Vector3 = player.anim_tree.get_root_motion_position().rotated(Vector3.UP, player.player_mesh.rotation.y)
+			velocity += root_motion * 35.0
+	# whenever there isn't collision, just use a zero vector in guard state.
+	# without this the enemy can occasionally get launched far away due to accumulated velocity. an aggressive move_toward could work too, maybe.
+	else:
+		velocity = Vector3.ZERO
+		
 	
 	if $GuardTimer.is_stopped():
 		start_guard_timer()
@@ -189,6 +201,7 @@ func handle_guard_state(delta: float) -> void:
 	# face the player smoothly
 	rotate_enemy_tracking(delta)
 	apply_only_gravity(delta)
+	move_and_slide()
 
 
 func handle_damaged_state(delta: float) -> void:
@@ -220,9 +233,6 @@ func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multipl
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
 	velocity += root_motion * rm_multiplier * delta
-	#velocity.x += root_motion.x * rm_multiplier * delta
-	#velocity.z += root_motion.z * rm_multiplier * delta
-	#velocity.y += root_motion.y * rm_multiplier * 8.0 * delta
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)
@@ -325,6 +335,7 @@ func _on_overlap_area_body_entered(body: Node3D):
 		if !(body == $"."):
 			nearby_allies.push_back(body)
 			combat_cast.add_exception(body)
+			nearby_cast.add_exception(body)
 			#print(nearby_allies)
 
 
@@ -339,6 +350,7 @@ func _on_overlap_area_body_exited(body: Node3D):
 	elif body is Enemy:
 		nearby_allies.erase(body)
 		combat_cast.remove_exception(body)
+		nearby_cast.remove_exception(body)
 
 
 ### HELPER FUNCTIONS

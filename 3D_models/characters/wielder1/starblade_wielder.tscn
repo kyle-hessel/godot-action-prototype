@@ -185,7 +185,7 @@ nodes/TakeDamageLeftShot/position = Vector2(2020, 120)
 nodes/TakeDamageRightShot/node = SubResource("AnimationNodeOneShot_8cbyt")
 nodes/TakeDamageRightShot/position = Vector2(2340, 120)
 nodes/output/position = Vector2(2640, 140)
-node_connections = [&"output", 0, &"TakeDamageRightShot", &"AttackGroundShot1", 0, &"DoubleJumpShot", &"AttackGroundShot1", 1, &"AttackComboGround1", &"AttackGroundShot2", 0, &"AttackGroundShot1", &"AttackGroundShot2", 1, &"AttackComboGround2", &"AttackGroundShot3", 0, &"AttackGroundShot2", &"AttackGroundShot3", 1, &"AttackComboGround3", &"DoubleJumpShot", 0, &"IdleWalkRun_Jump", &"DoubleJumpShot", 1, &"DoubleJumpAnim", &"TakeDamageFrontShot", 0, &"AttackGroundShot3", &"TakeDamageFrontShot", 1, &"TakeDamageFront", &"TakeDamageBackShot", 0, &"TakeDamageFrontShot", &"TakeDamageBackShot", 1, &"TakeDamageBack", &"TakeDamageLeftShot", 0, &"TakeDamageBackShot", &"TakeDamageLeftShot", 1, &"TakeDamageLeft", &"TakeDamageRightShot", 0, &"TakeDamageLeftShot", &"TakeDamageRightShot", 1, &"Animation"]
+node_connections = [&"output", 0, &"TakeDamageRightShot", &"AttackGroundShot1", 0, &"DoubleJumpShot", &"AttackGroundShot1", 1, &"AttackComboGround1", &"AttackGroundShot2", 0, &"AttackGroundShot1", &"AttackGroundShot2", 1, &"AttackComboGround2", &"AttackGroundShot3", 0, &"AttackGroundShot2", &"AttackGroundShot3", 1, &"AttackComboGround3", &"DoubleJumpShot", 0, &"IdleWalkRun_Jump", &"DoubleJumpShot", 1, &"DoubleJumpAnim", &"TakeDamageBackShot", 0, &"TakeDamageFrontShot", &"TakeDamageBackShot", 1, &"TakeDamageBack", &"TakeDamageFrontShot", 0, &"AttackGroundShot3", &"TakeDamageFrontShot", 1, &"TakeDamageFront", &"TakeDamageLeftShot", 0, &"TakeDamageBackShot", &"TakeDamageLeftShot", 1, &"TakeDamageLeft", &"TakeDamageRightShot", 0, &"TakeDamageLeftShot", &"TakeDamageRightShot", 1, &"Animation"]
 
 [sub_resource type="AnimationNodeStateMachinePlayback" id="AnimationNodeStateMachinePlayback_opt4b"]
 
@@ -282,7 +282,7 @@ surface_material_override/0 = ExtResource("3_wvftq")
 surface_material_override/0 = ExtResource("4_6nbw0")
 
 [node name="LeftHandAttachment" type="BoneAttachment3D" parent="Armature/Skeleton3D" index="3"]
-transform = Transform3D(-0.435685, 0.366404, 0.822148, 0.0172177, -0.909837, 0.414608, 0.899934, 0.194794, 0.390094, 0.261995, 0.925574, -0.0162205)
+transform = Transform3D(-0.435686, 0.366405, 0.822147, 0.0172169, -0.909837, 0.414609, 0.899934, 0.194794, 0.390095, 0.261995, 0.925574, -0.016221)
 bone_name = "def_palm.L"
 bone_idx = 65
 

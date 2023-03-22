@@ -33,7 +33,7 @@ var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
 var current_oneshot_anim: String
-var attack_anim_damage_cutoff: float = 0.25
+var attack_anim_damage_cutoff: float = 0.3
 var hit_received: bool = false
 var targeting: bool = false
 var tracking: bool = false
@@ -365,9 +365,8 @@ func stop_player_movement(delta: float) -> void:
 # determine how to move when applying root motion.
 func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier) -> void:
 	has_direction = false # ensure no added rotation movement lerping while attacking
-	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
-	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $starblade_wielder.rotation.y)
+	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(Vector3.UP, $starblade_wielder.rotation.y)
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
 	velocity += root_motion * rm_multiplier * delta
