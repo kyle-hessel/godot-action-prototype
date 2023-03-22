@@ -10,7 +10,7 @@ class_name EnemyDefault
 @export var enemy_speed: float = 5.0
 @export var enemy_decel_rate: float = 16.0
 @export var enemy_rotation_rate: float = 7.0
-@export var root_motion_multiplier: int = 3000
+@export var root_motion_multiplier: int = 27500
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
@@ -19,11 +19,12 @@ var guard_time_rand: float
 @export var wait_time_ceiling: float = 3.0
 var current_oneshot_anim: String
 var attack_anim_damage_cutoff: float = 0.25
-var hit_registered: bool = false
+var hit_delivered: bool = false
+var hit_received: bool = false
 
-@onready var anim_tree : AnimationTree = $AnimationTree
-@onready var collision_shape : CollisionShape3D = $CollisionShape3D
-@onready var nav_agent : NavigationAgent3D = $NavigationAgent3D
+@onready var anim_tree: AnimationTree = $AnimationTree
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
+@onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var combat_cast: ShapeCast3D = $EnemyMesh/CombatCast3D
 @onready var i_frames: Timer = $InvincibilityTimer
 
@@ -64,6 +65,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	
 	#print(movement_state)
 	anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
 	# if there is a player, do something
@@ -78,6 +80,7 @@ func _physics_process(delta: float) -> void:
 			
 			# face the player smoothly
 			rotate_enemy_tracking(delta)
+			apply_only_gravity(delta)
 			
 		# if guarding, periodically check what the player is doing.
 		elif movement_state == EnemyMovementState.GUARD:
@@ -93,6 +96,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		movement_state = EnemyMovementState.IDLE
 		velocity = Vector3.ZERO
+		apply_only_gravity(delta)
 
 
 func apply_only_gravity(delta: float) -> void:
@@ -144,33 +148,35 @@ func begin_attack() -> void:
 
 func handle_attack_state(delta: float) -> void:
 	# in attack state, drive velocity with root motion from anim.
-	handle_root_motion(delta, root_motion_multiplier)
+	handle_root_motion(delta, root_motion_multiplier * 2.5)
 	move_and_slide()
+	
+	# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
+	velocity = Vector3.ZERO
 			
 	if movement_state == EnemyMovementState.ATTACK:
 		# damage player, WIP
 		if combat_cast.is_colliding():
-			if !hit_registered:
-				#print(combat_cast.collision_result)
-				#print(combat_cast.get_collision_count())
-				# leaving this a for loop for now, in case of potential multiplayer later.
-				# if not, replace with - if combat_cast.collision_result[0]["collider"]:
-				# also change combat_cast.max_results to a lower value if SP only, at 4 right now.
-				for col in combat_cast.collision_result:
-					# **** remove this check later? only players should end up in this array anyway, leaving in case of future error.
-					if col["collider"] is Player:
-						var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
-						var anim_progress: float = anim_tree.get(attack_anim_string)
+			#print(combat_cast.collision_result)
+			#print(combat_cast.get_collision_count())
+			
+			# leaving this a for loop for now, in case of potential multiplayer later.
+			# if not, replace with - if combat_cast.collision_result[0]["collider"]:
+			# also change combat_cast.max_results to a lower value if SP only, at 4 right now.
+			for col in combat_cast.collision_result:
+				
+				if !col["collider"].hit_received:
+					var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+					var anim_progress: float = anim_tree.get(attack_anim_string)
 						
-						# only register hit if player has no i-frames and if enemy attack animation has properly ramped up.
-						if col["collider"].i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
-							hit_registered = true
-							
-							# inflict damage on the player, let them handle the details.
-							col["collider"].take_damage(enemy_normal_damage_stat, $EnemyMesh.transform.basis.z * -1.0)
-							
-							
-					else: print("Not a player.") # temp error handling, see above
+					# only register hit if player has no i-frames and if enemy attack animation has properly ramped up.
+					if col["collider"].i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
+						# mark that the body has received a hit from this attack anim so that it doesn't receive extra.
+						# do this per-object so that attacks can hit multiple enemies at once.
+						col["collider"].hit_received = true
+						
+						# inflict damage on the player, let them handle the details.
+						col["collider"].take_damage(enemy_normal_damage_stat, $EnemyMesh.transform.basis.z * -1.0)
 
 
 func handle_guard_state(delta: float) -> void:
@@ -182,14 +188,21 @@ func handle_guard_state(delta: float) -> void:
 			
 	# face the player smoothly
 	rotate_enemy_tracking(delta)
+	apply_only_gravity(delta)
 
 
 func handle_damaged_state(delta: float) -> void:
 	if !$GuardTimer.is_stopped():
 		$GuardTimer.stop()
+	if current_oneshot_anim == "TakeDamage1":
+		handle_root_motion(delta)
+	elif current_oneshot_anim == "TakeDamage2":
+		handle_root_motion(delta)
 		
-	handle_root_motion(delta, root_motion_multiplier * 0.25)
 	move_and_slide()
+	
+	# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
+	velocity = Vector3.ZERO
 
 
 func rotate_enemy_tracking(delta: float) -> void:
@@ -200,17 +213,19 @@ func rotate_enemy_tracking(delta: float) -> void:
 
 
 # determine how to move when applying root motion.
-func handle_root_motion(delta: float, rm_multiplier: float) -> void:
+func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier) -> void:
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
 	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y)
 	
 	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
 	velocity += root_motion * rm_multiplier * delta
+	#velocity.x += root_motion.x * rm_multiplier * delta
+	#velocity.z += root_motion.z * rm_multiplier * delta
+	#velocity.y += root_motion.y * rm_multiplier * 8.0 * delta
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)
-	print("wtf")
 
 
 # when enemy gets within a set distance to the target (player), switch to guard state.
@@ -230,7 +245,7 @@ func _on_navigation_agent_3d_velocity_computed(safe_velocity):
 
 func _on_guard_timer_timeout():
 	if targeted_player != null:
-		# if the player gets too far away, resume tracking
+		# if the player gets too far away, resume tracking.
 		var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 		if to_player.length_squared() > guard_player_distance:
 			movement_state = EnemyMovementState.TRACK
@@ -252,14 +267,15 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 		
 	# switch enemy state to damaged.
 	movement_state = EnemyMovementState.DAMAGED
+	velocity = Vector3.ZERO
 	
 	# determine which hit animation enemy plays. move damage into this as well later so that it varies.
 	if player_combo_stage > 2:
-		anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		current_oneshot_anim = "TakeDamageShot1"
+		anim_tree.set("parameters/TakeDamageShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+		current_oneshot_anim = "TakeDamage2"
 	else:
 		anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		current_oneshot_anim = "TakeDamageShot1"
+		current_oneshot_anim = "TakeDamage1"
 	
 	print("Enemy hurt! health: ", enemy_health_current)
 	
@@ -271,7 +287,10 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 func _on_animation_tree_animation_finished(anim_name):
 	# if finishing attack animation, resume TRACK state.
 	if movement_state == EnemyMovementState.ATTACK:
-		hit_registered = false
+		# reset hit reg for each nearby player at the end of each attack anim.
+		for player in nearby_players:
+			player.hit_received = false
+		
 		if anim_name == "EnemyAttack1":
 			movement_state = EnemyMovementState.TRACK
 			combat_cast.enabled = false
@@ -279,8 +298,7 @@ func _on_animation_tree_animation_finished(anim_name):
 	# if ending taking damage, resume track or guard state if we have a player still, and idle if not.
 	elif movement_state == EnemyMovementState.DAMAGED:
 		if targeted_player != null:
-			if anim_name == "TakeDamage1":
-				#velocity = Vector3.ZERO
+			if anim_name == "TakeDamage1" || anim_name == "TakeDamage2":
 				var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 				if to_player.length_squared() > guard_player_distance:
 					movement_state = EnemyMovementState.TRACK
@@ -312,6 +330,7 @@ func _on_overlap_area_body_entered(body: Node3D):
 
 func _on_overlap_area_body_exited(body: Node3D):
 	if body is Player:
+		body.hit_received = false
 		nearby_players.erase(body)
 		
 		if nearby_players.is_empty():

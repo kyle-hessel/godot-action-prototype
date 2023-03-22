@@ -18,7 +18,7 @@ var player_speed_current: float = 0.0
 @export var player_jump_decel_rate: float = 10.0
 @export var player_rotation_rate: float = 9.0
 @export var target_cam_bias_default: float = 0.3
-@export var target_cam_bias_additive: float = 0.4
+@export var target_cam_bias_additive: float = 0.2
 var target_cam_bias: float = target_cam_bias_default
 @export var cam_lerp_rate: float = 5.0
 @export var tracking_range: float = 6.0
@@ -33,7 +33,8 @@ var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
 var current_oneshot_anim: String
-var attack_anim_damage_cutoff: float = 0.2
+var attack_anim_damage_cutoff: float = 0.25
+var hit_received: bool = false
 var targeting: bool = false
 var tracking: bool = false
 
@@ -125,9 +126,8 @@ func _physics_process(delta: float) -> void:
 	# for visual debug
 	$SpringArmVisualizer.position = $SpringArm3D.position
 	
-	# if attacking, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
-	# this might need modification if root motion is used outside of combat later
-	if movement_state == PlayerMovementState.ATTACK:
+	# if attacking or damaged, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
+	if movement_state == PlayerMovementState.ATTACK || movement_state == PlayerMovementState.DAMAGED:
 		velocity = Vector3(0, velocity.y, 0)
 	
 	#print(player_speed_current)
@@ -241,11 +241,11 @@ func determine_player_movement_state(delta: float) -> void:
 	else:
 		# if attacking, calculate movement w/ root motion
 		if movement_state == PlayerMovementState.ATTACK:
-			handle_root_motion(delta, root_motion_multiplier)
+			handle_root_motion(delta)
 			
 		# if taking damage, reset attack combo, calculate movement w/ root motion
 		elif movement_state == PlayerMovementState.DAMAGED:
-			handle_root_motion(delta, root_motion_multiplier * 0.0125)
+			handle_root_motion(delta, root_motion_multiplier * 0.5)
 
 
 func calculate_player_lateral_movement(delta: float) -> void:
@@ -363,7 +363,7 @@ func stop_player_movement(delta: float) -> void:
 
 
 # determine how to move when applying root motion.
-func handle_root_motion(delta: float, rm_multiplier: float) -> void:
+func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier) -> void:
 	has_direction = false # ensure no added rotation movement lerping while attacking
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
@@ -674,6 +674,9 @@ func set_anim_blend(delta: float) -> void:
 func _on_animation_tree_animation_finished(anim_name):
 	# attack animation combo chain continuation logic
 	if movement_state == PlayerMovementState.ATTACK:
+		# reset hit reg for each nearby object at the end of each attack anim.
+		for obj in overlapping_objects:
+			obj.hit_received = false
 		
 		# if combo is continuing, determine which animation to play.
 		if continue_attack_chain == true:
@@ -722,6 +725,7 @@ func _on_overlap_area_body_shape_entered(body_rid: RID, body: Node3D, body_shape
 
 func _on_overlap_area_body_shape_exited(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int):
 	# remove any body that leaves.
+	body.hit_received = false
 	overlapping_objects.erase(body)
 	
 	# if there's no more overlapping objects, drop targeting.
@@ -757,14 +761,18 @@ func _on_vanish_timer_timeout() -> void:
 # hit registration on enemies
 func _on_sword_hitbox_area_body_entered(body: Node3D):
 	if movement_state == PlayerMovementState.ATTACK:
-		if body is Enemy:
-			var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
-			var anim_progress: float = anim_tree.get(attack_anim_string)
-			
-			# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
-			if body.i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
-				# inflict damage on the enemy, let them handle the details.
-				body.take_damage(player_damage_stat, attack_combo_stage)
+		if !body.hit_received:
+			if body is Enemy:
+				var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+				var anim_progress: float = anim_tree.get(attack_anim_string)
+				
+				# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
+				if body.i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
+					# mark that the body has received a hit from this attack anim so that it doesn't receive extra.
+					# do this per-object so that attacks can hit multiple enemies at once.
+					body.hit_received = true
+					# inflict damage on the enemy, let them handle the details.
+					body.take_damage(player_damage_stat, attack_combo_stage)
 
 
 func take_damage(amount: float, enemy_forward_vector: Vector3) -> void:
