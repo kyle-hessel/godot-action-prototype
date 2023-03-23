@@ -10,18 +10,19 @@ class_name EnemyDefault
 @export var enemy_speed: float = 5.0
 @export var enemy_decel_rate: float = 16.0
 @export var enemy_rotation_rate: float = 7.0
-@export var root_motion_multiplier: int = 22500
+@export var root_motion_multiplier: float = 20000.0
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
 @onready var i_frames_in_sec: float = 0.4
 @export var wait_time_floor: float = 1.5
-@export var wait_time_ceiling: float = 3.0
+@export var wait_time_ceiling: float = 2.5
 var current_oneshot_anim: String
 @export var attack_anim_damage_cutoff: float = 0.25
 @export var takedamage1_rootmotion_cutoff: float = 0.15
 @export var takedamage2_rootmotion_cutoff: float = 0.485
 var hit_received: bool = false
+var slide_away: bool = false
 var delta_cache: float = 0.0
 
 @onready var anim_tree: AnimationTree = $AnimationTree
@@ -48,7 +49,7 @@ enum EnemyMovementState {
 	ATTACK = 5,
 	DAMAGED = 6,
 	FLEE = 7,
-	DOWN = 8
+	DEAD = 8
 }
 
 enum EnemyType {
@@ -195,14 +196,17 @@ func handle_guard_state(delta: float) -> void:
 	# this makes combat feel much better when colliding with enemies, but it still isn't perfect.
 	if nearby_cast.is_colliding():
 		var player: CharacterBody3D = nearby_cast.get_collider()
-		if player.movement_state == player.PlayerMovementState.ATTACK:
-			var root_motion: Vector3 = player.anim_tree.get_root_motion_position().rotated(Vector3.UP, player.player_mesh.rotation.y)
-			velocity += root_motion * 45.0
-	# whenever there isn't collision, just use a zero vector in guard state.
-	# without this the enemy can occasionally get launched far away due to accumulated velocity. an aggressive move_toward could work too, maybe.
-	else:
-		if is_on_floor(): #also only do this on the floor, or gravity gets weird...
-			velocity = Vector3.ZERO
+		# an eight_directional version of find_relative_direction *might* be preferable here later.
+		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
+		if player.movement_state == player.PlayerMovementState.ATTACK && player_dir == "front":
+			slide_away = true
+	
+	
+	# slide away from the player using their velocity when the player is attacking.
+	if slide_away:
+		# this line could break later with multiplayer
+		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y)
+		velocity += root_motion * 50000.0 * delta
 		
 	
 	if $GuardTimer.is_stopped():
@@ -212,6 +216,12 @@ func handle_guard_state(delta: float) -> void:
 	rotate_enemy_tracking(delta)
 	apply_only_gravity(delta)
 	move_and_slide()
+	
+	# reset velocity at the end since we're using root motion.
+	if is_on_floor():
+		velocity = Vector3.ZERO
+	else:
+		velocity = Vector3(0.0, velocity.y, 0.0)
 
 
 func handle_damaged_state(delta: float) -> void:
@@ -231,6 +241,7 @@ func handle_damaged_state(delta: float) -> void:
 			reset_velocity = false
 		else:
 			handle_root_motion(delta)
+			
 	elif current_oneshot_anim == "TakeDamageShot2":
 		# apply only gravity when the enemy is near the end of this anim and not on the ground. otherwise, full root motion.
 		# this is tuned specifically for TakeDamage2.
@@ -238,7 +249,13 @@ func handle_damaged_state(delta: float) -> void:
 			apply_only_gravity(delta)
 			reset_velocity = false
 		else:
+			# enemy's own root motion
 			handle_root_motion(delta)
+			
+			# additionally, keep adding some of the player's root motion.
+			if slide_away:
+				var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y)
+				velocity += root_motion * 50000.0 * delta
 		
 	move_and_slide()
 	
@@ -343,6 +360,8 @@ func _on_animation_tree_animation_finished(anim_name):
 	elif movement_state == EnemyMovementState.DAMAGED:
 		if targeted_player != null:
 			if anim_name == "TakeDamage1" || anim_name == "TakeDamage2":
+				slide_away = false
+				
 				var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 				if to_player.length_squared() > guard_player_distance:
 					movement_state = EnemyMovementState.TRACK

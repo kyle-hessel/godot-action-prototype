@@ -25,7 +25,7 @@ var target_cam_bias: float = target_cam_bias_default
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
-@export var root_motion_multiplier: int = 55000
+@export var root_motion_multiplier: float = 55000.0
 
 var has_direction: bool = false
 var jumps_remaining: int = max_jumps
@@ -71,7 +71,7 @@ enum PlayerMovementState {
 	ROLL = 3,
 	ATTACK = 4,
 	DAMAGED = 5,
-	DOWN = 6
+	DEAD = 6
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
@@ -766,6 +766,7 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 	if movement_state == PlayerMovementState.ATTACK:
 		if !body.hit_received:
 			if body is Enemy:
+				# might want to make this vary based on animation.
 				var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
 				var anim_progress: float = anim_tree.get(attack_anim_string)
 				

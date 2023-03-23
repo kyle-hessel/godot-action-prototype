@@ -9,7 +9,7 @@ shader = ExtResource("2_6mm2y")
 shader_parameter/bg_color = Color(0.345098, 0.235294, 0.709804, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_sndku"]
-size = Vector3(0.266508, 1.13043, 0.0289808)
+size = Vector3(0.233548, 1.09692, 0.0289808)
 
 [node name="WielderSword" instance=ExtResource("1_sk8lx")]
 
