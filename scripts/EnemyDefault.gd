@@ -197,7 +197,7 @@ func handle_guard_state(delta: float) -> void:
 		var player: CharacterBody3D = nearby_cast.get_collider()
 		if player.movement_state == player.PlayerMovementState.ATTACK:
 			var root_motion: Vector3 = player.anim_tree.get_root_motion_position().rotated(Vector3.UP, player.player_mesh.rotation.y)
-			velocity += root_motion * 35.0
+			velocity += root_motion * 45.0
 	# whenever there isn't collision, just use a zero vector in guard state.
 	# without this the enemy can occasionally get launched far away due to accumulated velocity. an aggressive move_toward could work too, maybe.
 	else:
@@ -221,7 +221,6 @@ func handle_damaged_state(delta: float) -> void:
 	var reset_velocity: bool = true
 	var anim_string: String = "parameters/" + current_oneshot_anim + "/time"
 	var anim_progress: float = anim_tree.get(anim_string)
-	print(anim_progress)
 	
 	# precise handling of velocity based on animation states/progression.
 	if current_oneshot_anim == "TakeDamageShot1":
@@ -256,13 +255,17 @@ func rotate_enemy_tracking(delta: float) -> void:
 
 
 # determine how to move when applying root motion.
-func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier) -> void:
+func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
 	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y)
 	
-	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-	velocity += root_motion * rm_multiplier * delta
+	if lateral_only:
+		velocity.x += root_motion.x * rm_multiplier * delta
+		velocity.z += root_motion.z * rm_multiplier * delta
+	else:
+		# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
+		velocity += root_motion * rm_multiplier * delta
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)

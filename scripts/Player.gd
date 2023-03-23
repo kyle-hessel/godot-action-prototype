@@ -363,13 +363,17 @@ func stop_player_movement(delta: float) -> void:
 
 
 # determine how to move when applying root motion.
-func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier) -> void:
+func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
 	has_direction = false # ensure no added rotation movement lerping while attacking
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
 	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(Vector3.UP, $starblade_wielder.rotation.y)
 	
-	# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-	velocity += root_motion * rm_multiplier * delta
+	if lateral_only:
+		velocity.x += root_motion.x * rm_multiplier * delta
+		velocity.z += root_motion.z * rm_multiplier * delta
+	else:
+		# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
+		velocity += root_motion * rm_multiplier * delta
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)
