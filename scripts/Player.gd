@@ -25,7 +25,7 @@ var target_cam_bias: float = target_cam_bias_default
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
-@export var root_motion_multiplier: int = 50000
+@export var root_motion_multiplier: int = 55000
 
 var has_direction: bool = false
 var jumps_remaining: int = max_jumps

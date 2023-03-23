@@ -18,9 +18,11 @@ var guard_time_rand: float
 @export var wait_time_floor: float = 1.5
 @export var wait_time_ceiling: float = 3.0
 var current_oneshot_anim: String
-var attack_anim_damage_cutoff: float = 0.25
-var hit_delivered: bool = false
+@export var attack_anim_damage_cutoff: float = 0.25
+@export var takedamage1_rootmotion_cutoff: float = 0.15
+@export var takedamage2_rootmotion_cutoff: float = 0.485
 var hit_received: bool = false
+var delta_cache: float = 0.0
 
 @onready var anim_tree: AnimationTree = $AnimationTree
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
@@ -67,7 +69,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	#print(movement_state)
+	#print(velocity.length())
+	#print(is_on_floor())
 	anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
 	# if there is a player, do something
 	if targeted_player != null:
@@ -76,12 +79,13 @@ func _physics_process(delta: float) -> void:
 			# for whatever reason none of this logic works if abstracted into another function.
 			if !$GuardTimer.is_stopped():
 				$GuardTimer.stop()
-				
+			
+			delta_cache = delta
+			
 			execute_nav(delta)
 			
 			# face the player smoothly
 			rotate_enemy_tracking(delta)
-			apply_only_gravity(delta)
 			
 		# if guarding, periodically check what the player is doing.
 		elif movement_state == EnemyMovementState.GUARD:
@@ -97,8 +101,14 @@ func _physics_process(delta: float) -> void:
 	# if there's no player, just be still. (add roaming here later)
 	else:
 		movement_state = EnemyMovementState.IDLE
-		velocity = Vector3.ZERO
 		apply_only_gravity(delta)
+		
+		if is_on_floor():
+			velocity = Vector3.ZERO
+		else:
+			velocity = Vector3(0.0, velocity.y, 0.0)
+		
+		move_and_slide()
 
 
 func apply_only_gravity(delta: float) -> void:
@@ -109,7 +119,6 @@ func apply_only_gravity(delta: float) -> void:
 # navigates to a player, relying on target_pos (updated from update_nav_target_pos)
 func execute_nav(delta: float, modifier: float = 120.0) -> void:
 	var new_velocity: Vector3
-	
 	# only navigate if the target can be reached.
 	if nav_agent.is_target_reachable():
 		var current_location: Vector3 = global_position
@@ -117,7 +126,7 @@ func execute_nav(delta: float, modifier: float = 120.0) -> void:
 		# get the direction to the next point, and multiply that by an arbitrary speed to get a new velocity (vector) w/ direction + magnitude.
 		new_velocity = (next_location - current_location).normalized() * enemy_speed * delta * modifier
 	else:
-		new_velocity = Vector3.ZERO
+		new_velocity = Vector3(0.0, velocity.y, 0.0)
 	
 	# converts our newly calculated velocity to a 'safe velocity' that factors in other nearby agents, etc.
 	# see _on_navigation_agent_3d_velocity_computed.
@@ -150,7 +159,7 @@ func begin_attack() -> void:
 
 func handle_attack_state(delta: float) -> void:
 	# in attack state, drive velocity with root motion from anim.
-	handle_root_motion(delta, root_motion_multiplier * 2.75)
+	handle_root_motion(delta, root_motion_multiplier * 3.0)
 	move_and_slide()
 	
 	# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
@@ -192,7 +201,8 @@ func handle_guard_state(delta: float) -> void:
 	# whenever there isn't collision, just use a zero vector in guard state.
 	# without this the enemy can occasionally get launched far away due to accumulated velocity. an aggressive move_toward could work too, maybe.
 	else:
-		velocity = Vector3.ZERO
+		if is_on_floor(): #also only do this on the floor, or gravity gets weird...
+			velocity = Vector3.ZERO
 		
 	
 	if $GuardTimer.is_stopped():
@@ -207,15 +217,35 @@ func handle_guard_state(delta: float) -> void:
 func handle_damaged_state(delta: float) -> void:
 	if !$GuardTimer.is_stopped():
 		$GuardTimer.stop()
-	if current_oneshot_anim == "TakeDamage1":
-		handle_root_motion(delta)
-	elif current_oneshot_anim == "TakeDamage2":
-		handle_root_motion(delta)
+	
+	var reset_velocity: bool = true
+	var anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+	var anim_progress: float = anim_tree.get(anim_string)
+	print(anim_progress)
+	
+	# precise handling of velocity based on animation states/progression.
+	if current_oneshot_anim == "TakeDamageShot1":
+		# apply only gravity when the enemy is a little ways into this anim and not on the ground. otherwise, full root motion.
+		# this is tuned specifically for TakeDamage2.
+		if anim_progress > takedamage1_rootmotion_cutoff && !is_on_floor():
+			apply_only_gravity(delta)
+			reset_velocity = false
+		else:
+			handle_root_motion(delta)
+	elif current_oneshot_anim == "TakeDamageShot2":
+		# apply only gravity when the enemy is near the end of this anim and not on the ground. otherwise, full root motion.
+		# this is tuned specifically for TakeDamage2.
+		if anim_progress > takedamage2_rootmotion_cutoff && !is_on_floor():
+			apply_only_gravity(delta)
+			reset_velocity = false
+		else:
+			handle_root_motion(delta)
 		
 	move_and_slide()
 	
-	# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
-	velocity = Vector3.ZERO
+	if reset_velocity:
+		# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
+		velocity = Vector3.ZERO
 
 
 func rotate_enemy_tracking(delta: float) -> void:
@@ -246,10 +276,11 @@ func _on_navigation_agent_3d_target_reached():
 		velocity = Vector3.ZERO
 
 
-# final velocity when in track state
+# final velocity when in track mode.
 func _on_navigation_agent_3d_velocity_computed(safe_velocity):
 	# smoother velocity with move_toward, helps with corners, etc
-	velocity = velocity.move_toward(safe_velocity, 0.25)
+	velocity = velocity.move_toward(safe_velocity, 12.0 * delta_cache)
+	apply_only_gravity(delta_cache)
 	move_and_slide()
 
 
@@ -282,10 +313,10 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 	# determine which hit animation enemy plays. move damage into this as well later so that it varies.
 	if player_combo_stage > 2:
 		anim_tree.set("parameters/TakeDamageShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		current_oneshot_anim = "TakeDamage2"
+		current_oneshot_anim = "TakeDamageShot2"
 	else:
 		anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		current_oneshot_anim = "TakeDamage1"
+		current_oneshot_anim = "TakeDamageShot1"
 	
 	print("Enemy hurt! health: ", enemy_health_current)
 	
@@ -403,3 +434,5 @@ func find_relative_direction(from: Vector3, to: Vector3) -> String:
 		return "front"
 	else:
 		return "?"
+
+
