@@ -769,9 +769,16 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 				# might want to make this vary based on animation.
 				var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
 				var anim_progress: float = anim_tree.get(attack_anim_string)
+				var current_attack_damage_anim_cutoff = attack_anim_damage_cutoff
+				
+				# make the wind-up longer for the player's last combo animation. will probably need tweaking later.
+				if current_oneshot_anim == "AttackGroundShot3":
+					current_attack_damage_anim_cutoff = attack_anim_damage_cutoff * 1.2
 				
 				# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
-				if body.i_frames.is_stopped() && anim_progress > attack_anim_damage_cutoff:
+				if body.i_frames.is_stopped() && anim_progress > current_attack_damage_anim_cutoff:
+					print(anim_progress)
+					print(current_attack_damage_anim_cutoff)
 					# mark that the body has received a hit from this attack anim so that it doesn't receive extra.
 					# do this per-object so that attacks can hit multiple enemies at once.
 					body.hit_received = true

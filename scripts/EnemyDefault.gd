@@ -14,7 +14,7 @@ class_name EnemyDefault
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
-@onready var i_frames_in_sec: float = 0.4
+@onready var i_frames_in_sec: float = 0.5
 @export var wait_time_floor: float = 1.5
 @export var wait_time_ceiling: float = 2.5
 var current_oneshot_anim: String
@@ -198,8 +198,12 @@ func handle_guard_state(delta: float) -> void:
 		var player: CharacterBody3D = nearby_cast.get_collider()
 		# an eight_directional version of find_relative_direction *might* be preferable here later.
 		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
+		print(player_dir)
 		if player.movement_state == player.PlayerMovementState.ATTACK && player_dir == "front":
 			slide_away = true
+		else:
+			# I think this is fine, may help with edge cases
+			slide_away = false
 	
 	
 	# slide away from the player using their velocity when the player is attacking.
