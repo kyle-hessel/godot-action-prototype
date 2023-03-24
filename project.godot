@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [debug]
 
+settings/stdout/print_fps=true
 settings/vsync/vsync_mode=1
 settings/run_on_separate_thread=true
 settings/physics_jitter_fix=0.5
@@ -137,7 +138,7 @@ dodge={
 
 [physics]
 
-3d/run_on_separate_thread=true
+2d/run_on_separate_thread=true
 common/physics_ticks_per_second=120
 common/max_physics_steps_per_frame=16
 3d/default_gravity=20.0

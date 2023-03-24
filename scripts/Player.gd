@@ -91,13 +91,6 @@ func _ready():
 	target_icon.scale = Vector2(viewport_width * 0.00005, viewport_width * 0.00005)
 
 
-# fluctuating framerate-based delta time
-func _process(delta: float) -> void:
-	#print(Engine.get_frames_per_second())
-	#print(spring_arm_default_pos.position)
-	pass
-
-
 # difference from _process: https://godotengine.org/qa/57458/difference-between-_process-_physics_process-have-script
 # tl;dr stable delta time
 func _physics_process(delta: float) -> void:

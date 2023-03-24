@@ -256,10 +256,10 @@ func handle_damaged_state(delta: float) -> void:
 			# enemy's own root motion
 			handle_root_motion(delta)
 			
-			# additionally, keep adding some of the player's root motion.
-			if slide_away:
-				var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y)
-				velocity += root_motion * 50000.0 * delta
+	# additionally, keep adding some of the player's root motion.
+	if slide_away:
+		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y)
+		velocity += root_motion * 50000.0 * delta
 		
 	move_and_slide()
 	
