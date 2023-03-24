@@ -8,9 +8,9 @@ class_name EnemyDefault
 @export var enemy_special_damage_stat: float = enemy_normal_damage_stat * 2.0
 
 @export var enemy_speed: float = 5.0
-@export var enemy_decel_rate: float = 16.0
+@export var enemy_decel_rate: float = 0.5
 @export var enemy_rotation_rate: float = 7.0
-@export var root_motion_multiplier: float = 20000.0
+@export var root_motion_multiplier: float = 1.5
 var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
@@ -23,7 +23,6 @@ var current_oneshot_anim: String
 @export var takedamage2_rootmotion_cutoff: float = 0.485
 var hit_received: bool = false
 var slide_away: bool = false
-var delta_cache: float = 0.0
 
 @onready var anim_tree: AnimationTree = $AnimationTree
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
@@ -81,8 +80,6 @@ func _physics_process(delta: float) -> void:
 			if !$GuardTimer.is_stopped():
 				$GuardTimer.stop()
 			
-			delta_cache = delta
-			
 			execute_nav(delta)
 			
 			# face the player smoothly
@@ -125,13 +122,14 @@ func execute_nav(delta: float, modifier: float = 120.0) -> void:
 		var current_location: Vector3 = global_position
 		var next_location: Vector3 = nav_agent.get_next_path_position()
 		# get the direction to the next point, and multiply that by an arbitrary speed to get a new velocity (vector) w/ direction + magnitude.
-		new_velocity = (next_location - current_location).normalized() * enemy_speed * delta * modifier
+		new_velocity = (next_location - current_location).normalized() * enemy_speed
 	else:
 		new_velocity = Vector3(0.0, velocity.y, 0.0)
 	
 	# converts our newly calculated velocity to a 'safe velocity' that factors in other nearby agents, etc.
 	# see _on_navigation_agent_3d_velocity_computed.
 	nav_agent.set_velocity(new_velocity)
+	#apply_only_gravity(delta)
 	
 	#print(nav_agent.is_target_reachable())
 
@@ -205,14 +203,12 @@ func handle_guard_state(delta: float) -> void:
 			# I think this is fine, may help with edge cases
 			slide_away = false
 	
-	
 	# slide away from the player using their velocity when the player is attacking.
 	if slide_away:
 		# this line could break later with multiplayer
-		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y)
-		velocity += root_motion * 50000.0 * delta
+		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
+		velocity += root_motion * root_motion_multiplier * 2.5
 		
-	
 	if $GuardTimer.is_stopped():
 		start_guard_timer()
 			
@@ -244,7 +240,7 @@ func handle_damaged_state(delta: float) -> void:
 			apply_only_gravity(delta)
 			reset_velocity = false
 		else:
-			handle_root_motion(delta)
+			handle_root_motion(delta, root_motion_multiplier * 0.9)
 			
 	elif current_oneshot_anim == "TakeDamageShot2":
 		# apply only gravity when the enemy is near the end of this anim and not on the ground. otherwise, full root motion.
@@ -254,12 +250,12 @@ func handle_damaged_state(delta: float) -> void:
 			reset_velocity = false
 		else:
 			# enemy's own root motion
-			handle_root_motion(delta)
+			handle_root_motion(delta, root_motion_multiplier * 0.9)
 			
 	# additionally, keep adding some of the player's root motion.
 	if slide_away:
-		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y)
-		velocity += root_motion * 50000.0 * delta
+		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
+		velocity += root_motion * root_motion_multiplier * 2.5
 		
 	move_and_slide()
 	
@@ -279,14 +275,14 @@ func rotate_enemy_tracking(delta: float) -> void:
 func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
-	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y)
+	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y) / delta
 	
 	if lateral_only:
-		velocity.x += root_motion.x * rm_multiplier * delta
-		velocity.z += root_motion.z * rm_multiplier * delta
+		velocity.x += root_motion.x * rm_multiplier
+		velocity.z += root_motion.z * rm_multiplier
 	else:
 		# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-		velocity += root_motion * rm_multiplier * delta
+		velocity += root_motion * rm_multiplier
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)
@@ -303,8 +299,7 @@ func _on_navigation_agent_3d_target_reached():
 # final velocity when in track mode.
 func _on_navigation_agent_3d_velocity_computed(safe_velocity):
 	# smoother velocity with move_toward, helps with corners, etc
-	velocity = velocity.move_toward(safe_velocity, 12.0 * delta_cache)
-	apply_only_gravity(delta_cache)
+	velocity = velocity.move_toward(safe_velocity, enemy_decel_rate)
 	move_and_slide()
 
 

@@ -25,7 +25,7 @@ var target_cam_bias: float = target_cam_bias_default
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
-@export var root_motion_multiplier: float = 55000.0
+@export var root_motion_multiplier: float = 4.0
 
 var has_direction: bool = false
 var jumps_remaining: int = max_jumps
@@ -328,12 +328,12 @@ func smooth_accelerate(delta: float) -> void:
 
 func apply_player_lateral_movement(delta: float, dir: Vector3, modifier: float = 120.0) -> void: # last param (modifier) is to scale w/ delta
 	if !is_jumping:
-		velocity.x = dir.x * player_speed_current * modifier * delta
-		velocity.z = dir.z * player_speed_current * modifier * delta
+		velocity.x = dir.x * player_speed_current
+		velocity.z = dir.z * player_speed_current
 	else:
 		var player_speed_jump: float = player_speed_current * player_jump_speed_modifier
-		velocity.x = dir.x * player_speed_jump * modifier * delta
-		velocity.z = dir.z * player_speed_jump * modifier * delta
+		velocity.x = dir.x * player_speed_jump
+		velocity.z = dir.z * player_speed_jump
 
 
 func stop_player_movement(delta: float) -> void:
@@ -359,14 +359,14 @@ func stop_player_movement(delta: float) -> void:
 func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
 	has_direction = false # ensure no added rotation movement lerping while attacking
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
-	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(Vector3.UP, $starblade_wielder.rotation.y)
+	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(Vector3.UP, $starblade_wielder.rotation.y) / delta
 	
 	if lateral_only:
-		velocity.x += root_motion.x * rm_multiplier * delta
-		velocity.z += root_motion.z * rm_multiplier * delta
+		velocity.x += root_motion.x * rm_multiplier
+		velocity.z += root_motion.z * rm_multiplier
 	else:
 		# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-		velocity += root_motion * rm_multiplier * delta
+		velocity += root_motion * rm_multiplier
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)

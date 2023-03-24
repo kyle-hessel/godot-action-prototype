@@ -27,4 +27,3 @@ func _ready() -> void:
 	
 func _physics_process(delta) -> void:
 	get_tree().call_group("enemies", "update_nav_target_pos", $Player.global_position)
-	#print(delta)
