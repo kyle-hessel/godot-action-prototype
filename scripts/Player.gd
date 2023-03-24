@@ -777,8 +777,8 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 				
 				# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
 				if body.i_frames.is_stopped() && anim_progress > current_attack_damage_anim_cutoff:
-					print(anim_progress)
-					print(current_attack_damage_anim_cutoff)
+					#print(anim_progress)
+					#print(current_attack_damage_anim_cutoff)
 					# mark that the body has received a hit from this attack anim so that it doesn't receive extra.
 					# do this per-object so that attacks can hit multiple enemies at once.
 					body.hit_received = true

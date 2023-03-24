@@ -198,7 +198,7 @@ func handle_guard_state(delta: float) -> void:
 		var player: CharacterBody3D = nearby_cast.get_collider()
 		# an eight_directional version of find_relative_direction *might* be preferable here later.
 		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
-		print(player_dir)
+		#print(player_dir)
 		if player.movement_state == player.PlayerMovementState.ATTACK && player_dir == "front":
 			slide_away = true
 		else:

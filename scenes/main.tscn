@@ -207,7 +207,7 @@ size = Vector3(22.5097, 5.84383, 7.78585)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.3469, 14.1866, 2.65404)
 
 [node name="EnemyStarfiend2" parent="." instance=ExtResource("6_af7ak")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.3052, 14.1866, -0.508535)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.3052, 14.4908, -0.508535)
 
 [node name="EnemyStarfiend3" parent="." instance=ExtResource("6_af7ak")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.2615, 14.1866, 5.89291)
