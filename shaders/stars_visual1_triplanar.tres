@@ -1,4 +1,4 @@
-[gd_resource type="VisualShader" load_steps=45 format=3 uid="uid://jt23cahyvxnv"]
+[gd_resource type="VisualShader" load_steps=44 format=3 uid="uid://jt23cahyvxnv"]
 
 [ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/BlendModes/additive_blend.gd" id="1_axb1p"]
 [ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/UV/UVTiler.gd" id="1_ldrv7"]
@@ -135,11 +135,6 @@ default_value = 70.0
 [sub_resource type="VisualShaderNodeFloatOp" id="VisualShaderNodeFloatOp_8wkvp"]
 operator = 2
 
-[sub_resource type="VisualShaderNodeFloatParameter" id="VisualShaderNodeFloatParameter_m80xo"]
-parameter_name = "AlphaValue"
-default_value_enabled = true
-default_value = 0.9
-
 [sub_resource type="VisualShaderNodeVec2Parameter" id="VisualShaderNodeVec2Parameter_walv6"]
 parameter_name = "NoiseScale"
 default_value_enabled = true
@@ -181,7 +176,6 @@ uniform float NoiseRotSpeed = 35;
 uniform float GlitterOffset = 0.75;
 uniform vec4 FresnelColor : source_color = vec4(0.215009, 0.235149, 0.754815, 1.000000);
 uniform float FresnelPower = 3;
-uniform float AlphaValue = 0.89999997615814;
 
 
 // UVRotate
@@ -441,20 +435,15 @@ void fragment() {
 	}
 
 
-// FloatParameter:48
-	float n_out48p0 = AlphaValue;
-
-
 // Output:0
 	ALBEDO = n_out38p0;
-	ALPHA = n_out48p0;
 	SPECULAR = n_out38p0.x;
 	EMISSION = n_out38p0;
 
 
 }
 "
-graph_offset = Vector2(387.478, 317.009)
+graph_offset = Vector2(114.571, 206.733)
 flags/unshaded = true
 flags/shadows_disabled = true
 nodes/fragment/0/position = Vector2(1400, 420)
@@ -536,6 +525,4 @@ nodes/fragment/46/node = SubResource("VisualShaderNodeFloatParameter_imbic")
 nodes/fragment/46/position = Vector2(-900, 1660)
 nodes/fragment/47/node = SubResource("VisualShaderNodeFloatOp_8wkvp")
 nodes/fragment/47/position = Vector2(-604.9, 1624.36)
-nodes/fragment/48/node = SubResource("VisualShaderNodeFloatParameter_m80xo")
-nodes/fragment/48/position = Vector2(1020, 380)
-nodes/fragment/connections = PackedInt32Array(4, 0, 9, 0, 7, 0, 11, 0, 10, 0, 11, 1, 8, 0, 13, 1, 13, 0, 15, 0, 17, 0, 18, 0, 11, 0, 9, 1, 9, 0, 19, 0, 19, 0, 13, 0, 15, 0, 20, 0, 20, 0, 21, 0, 18, 0, 20, 1, 22, 0, 23, 0, 25, 0, 24, 3, 26, 0, 27, 0, 24, 0, 27, 1, 23, 0, 28, 0, 27, 0, 28, 1, 6, 0, 4, 0, 5, 0, 6, 0, 14, 0, 17, 0, 21, 0, 23, 1, 29, 1, 4, 2, 33, 0, 37, 0, 36, 0, 37, 2, 28, 0, 38, 1, 38, 0, 0, 0, 38, 0, 0, 4, 38, 0, 0, 5, 37, 0, 38, 0, 34, 0, 37, 1, 35, 0, 36, 0, 32, 1, 36, 1, 40, 0, 41, 0, 44, 0, 43, 2, 43, 0, 32, 0, 45, 0, 47, 0, 46, 0, 47, 1, 47, 0, 44, 0, 41, 0, 43, 0, 48, 0, 0, 1)
+nodes/fragment/connections = PackedInt32Array(4, 0, 9, 0, 7, 0, 11, 0, 10, 0, 11, 1, 8, 0, 13, 1, 13, 0, 15, 0, 17, 0, 18, 0, 11, 0, 9, 1, 9, 0, 19, 0, 19, 0, 13, 0, 15, 0, 20, 0, 20, 0, 21, 0, 18, 0, 20, 1, 22, 0, 23, 0, 25, 0, 24, 3, 26, 0, 27, 0, 24, 0, 27, 1, 23, 0, 28, 0, 27, 0, 28, 1, 6, 0, 4, 0, 5, 0, 6, 0, 14, 0, 17, 0, 21, 0, 23, 1, 29, 1, 4, 2, 33, 0, 37, 0, 36, 0, 37, 2, 28, 0, 38, 1, 38, 0, 0, 0, 38, 0, 0, 4, 38, 0, 0, 5, 37, 0, 38, 0, 34, 0, 37, 1, 35, 0, 36, 0, 32, 1, 36, 1, 40, 0, 41, 0, 44, 0, 43, 2, 43, 0, 32, 0, 45, 0, 47, 0, 46, 0, 47, 1, 47, 0, 44, 0, 41, 0, 43, 0)

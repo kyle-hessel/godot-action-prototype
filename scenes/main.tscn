@@ -1,11 +1,16 @@
-[gd_scene load_steps=23 format=3 uid="uid://wr13h1xbxd0v"]
+[gd_scene load_steps=34 format=3 uid="uid://wr13h1xbxd0v"]
 
 [ext_resource type="PackedScene" uid="uid://cc7svareltvw7" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Level.gd" id="1_wxnjq"]
 [ext_resource type="Shader" uid="uid://bdsnv803na2o" path="res://shaders/experimental/water.tres" id="3_c4y8b"]
 [ext_resource type="Shader" path="res://shaders/experimental/realistic_water.gdshader" id="5_71bb4"]
-[ext_resource type="PackedScene" uid="uid://cokkv33v0mm1f" path="res://3D_models/characters/enemies/starfiend1/cloaked_starfiend.tscn" id="6_af7ak"]
+[ext_resource type="PackedScene" uid="uid://d0u2klrdb7y18" path="res://3D_models/characters/enemies/starfiend1/cloaked_starfiend.tscn" id="6_af7ak"]
+[ext_resource type="Texture2D" uid="uid://drhcnf2vk6xm0" path="res://3D_models/textures/kenney_prototype-textures/PNG/Green/texture_01.png" id="6_dmsry"]
+[ext_resource type="Texture2D" uid="uid://blt0fh5nbxa7t" path="res://3D_models/textures/kenney_prototype-textures/PNG/Purple/texture_01.png" id="6_rgnkl"]
+[ext_resource type="Texture2D" uid="uid://dvfykvqa0ey36" path="res://3D_models/textures/kenney_prototype-textures/PNG/Red/texture_01.png" id="7_4s61h"]
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
+[ext_resource type="Texture2D" uid="uid://cmq87abrni1at" path="res://3D_models/textures/kenney_prototype-textures/PNG/Orange/texture_01.png" id="7_ypp5c"]
+[ext_resource type="Texture2D" uid="uid://c2vs766qsvc26" path="res://3D_models/textures/kenney_prototype-textures/PNG/Light/texture_08.png" id="8_amvko"]
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_8bey6"]
 
@@ -105,8 +110,33 @@ polygons = [PackedInt32Array(3, 2, 0), PackedInt32Array(0, 2, 1), PackedInt32Arr
 cell_height = 0.05
 agent_max_climb = 0.05
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jyu5b"]
-albedo_color = Color(0.709804, 0.678431, 0.643137, 1)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fxpjy"]
+albedo_texture = ExtResource("6_dmsry")
+uv1_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_j65ot"]
+albedo_texture = ExtResource("7_4s61h")
+uv1_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pwv4t"]
+albedo_texture = ExtResource("7_4s61h")
+uv1_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i7066"]
+albedo_texture = ExtResource("6_dmsry")
+uv1_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nyqlj"]
+albedo_texture = ExtResource("8_amvko")
+uv1_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6nkp0"]
+albedo_texture = ExtResource("7_ypp5c")
+uv1_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kyei4"]
+albedo_texture = ExtResource("6_rgnkl")
+uv1_triplanar = true
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_wxnjq")
@@ -164,12 +194,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00468922, 13.3909, -26.586
 use_collision = true
 radius = 1.1352
 sides = 32
+material = SubResource("StandardMaterial3D_fxpjy")
 
 [node name="CSGCylinder3D4" type="CSGCylinder3D" parent="NavigationRegion3D/CSG"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.17046, 13.3909, -25.3076)
 use_collision = true
 radius = 0.440608
 sides = 32
+material = SubResource("StandardMaterial3D_j65ot")
 
 [node name="CSGCylinder3D2" type="CSGCylinder3D" parent="NavigationRegion3D/CSG"]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 1.37731, 18.4718, -0.581192)
@@ -177,6 +209,7 @@ use_collision = true
 radius = 1.1352
 height = 5.91853
 sides = 32
+material = SubResource("StandardMaterial3D_pwv4t")
 
 [node name="CSGCylinder3D3" type="CSGCylinder3D" parent="NavigationRegion3D/CSG"]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -1.38669, 15.8369, -0.581192)
@@ -184,22 +217,25 @@ use_collision = true
 radius = 1.1352
 height = 2.64738
 sides = 32
+material = SubResource("StandardMaterial3D_i7066")
 
 [node name="Floor" type="CSGBox3D" parent="NavigationRegion3D/CSG"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 14.1413, 0)
 use_collision = true
 size = Vector3(40.4731, 0.0906145, 44.8961)
-material = SubResource("StandardMaterial3D_jyu5b")
+material = SubResource("StandardMaterial3D_nyqlj")
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="NavigationRegion3D/CSG"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 17.1413, 10.6272)
 use_collision = true
 size = Vector3(12.0728, 19.0895, 16.3179)
+material = SubResource("StandardMaterial3D_6nkp0")
 
 [node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/CSG"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39.4025, 14.1413, 0)
 use_collision = true
 size = Vector3(22.5097, 5.84383, 7.78585)
+material = SubResource("StandardMaterial3D_kyei4")
 
 [node name="Enemies" type="Node3D" parent="."]
 

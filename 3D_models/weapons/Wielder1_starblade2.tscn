@@ -1,23 +1,22 @@
-[gd_scene load_steps=6 format=3 uid="uid://bkkes2u7ndmqp"]
+[gd_scene load_steps=6 format=3 uid="uid://buqr5rjkgiogc"]
 
 [ext_resource type="PackedScene" uid="uid://pbbrc201a2h6" path="res://3D_models/weapons/Wielder1_Sword2.glb" id="1_sk8lx"]
-[ext_resource type="Shader" uid="uid://jt23cahyvxnv" path="res://shaders/stars_visual1.tres" id="2_gxfnl"]
+[ext_resource type="Shader" uid="uid://jt23cahyvxnv" path="res://shaders/stars_visual1_triplanar.tres" id="2_jnuct"]
 [ext_resource type="Texture2D" uid="uid://d1qko580ph01p" path="res://shaders/textures/hurlnoise1.png" id="3_gwnmi"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2ls0y"]
 render_priority = 0
-shader = ExtResource("2_gxfnl")
+shader = ExtResource("2_jnuct")
 shader_parameter/GradientCol1 = Color(1, 0.494118, 0.941176, 1)
 shader_parameter/GradientCol2 = Color(0.243137, 0.0352941, 0.760784, 1)
 shader_parameter/BaseGradientPower = 0.5
 shader_parameter/GradientRotSpeed = 70.0
 shader_parameter/StarColor = Color(0.607843, 0.635294, 0.835294, 1)
-shader_parameter/NoiseScale = Vector2(1.5, 1.5)
+shader_parameter/NoiseScale = Vector2(1.25, 1.25)
 shader_parameter/NoiseRotSpeed = 60.0
 shader_parameter/GlitterOffset = 0.75
 shader_parameter/FresnelColor = Color(0.721569, 0.219608, 0.737255, 1)
 shader_parameter/FresnelPower = 1.4
-shader_parameter/AlphaValue = 0.8
 shader_parameter/triplanar_scale = Vector3(1, 1, 1)
 shader_parameter/triplanar_offset = null
 shader_parameter/triplanar_sharpness = 0.5
