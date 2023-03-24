@@ -115,7 +115,7 @@ func apply_only_gravity(delta: float) -> void:
 
 
 # navigates to a player, relying on target_pos (updated from update_nav_target_pos)
-func execute_nav(delta: float, modifier: float = 120.0) -> void:
+func execute_nav(delta: float) -> void:
 	var new_velocity: Vector3
 	# only navigate if the target can be reached.
 	if nav_agent.is_target_reachable():

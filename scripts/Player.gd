@@ -8,7 +8,7 @@ class_name Player
 @export var player_damage_stat: float = player_base_damage_stat
 
 var player_speed_current: float = 0.0
-@export var player_speed_walk_max: float = 6.0
+@export var player_speed_walk_max: float = 5.0
 @export var player_speed_sprint_max: float = player_speed_walk_max * 2.0
 @export var player_jump_speed_modifier: float = 0.8
 @export var player_double_jump_modifier: float = 1.4
@@ -326,7 +326,7 @@ func smooth_accelerate(delta: float) -> void:
 			player_speed_current = player_speed_sprint_max
 
 
-func apply_player_lateral_movement(delta: float, dir: Vector3, modifier: float = 120.0) -> void: # last param (modifier) is to scale w/ delta
+func apply_player_lateral_movement(delta: float, dir: Vector3) -> void:
 	if !is_jumping:
 		velocity.x = dir.x * player_speed_current
 		velocity.z = dir.z * player_speed_current
@@ -379,7 +379,8 @@ func determine_target() -> void:
 		if Input.is_action_just_pressed("target"):
 				# if we have overlapping objects, toggle targeting
 				targeting = !targeting
-				target_icon.visible = !target_icon.visible
+				if targeted_object && object_visibility_check(targeted_object):
+					target_icon.visible = !target_icon.visible
 				
 				# if targeting, find nearest object to target.
 				if targeting:

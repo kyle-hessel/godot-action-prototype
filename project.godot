@@ -17,7 +17,6 @@ config/icon="res://icon.svg"
 
 [debug]
 
-settings/stdout/print_fps=true
 settings/vsync/vsync_mode=1
 settings/run_on_separate_thread=true
 settings/physics_jitter_fix=0.5

@@ -23,7 +23,7 @@ shader_parameter/triplanar_sharpness = 0.5
 shader_parameter/NoiseTextureTriplanar = ExtResource("3_gwnmi")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_sndku"]
-size = Vector3(0.233548, 1.09692, 0.0289808)
+size = Vector3(0.233548, 1.09692, 0.0515554)
 
 [node name="WielderSword" instance=ExtResource("1_sk8lx")]
 
