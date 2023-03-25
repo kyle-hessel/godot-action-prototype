@@ -16,7 +16,7 @@ var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
 @onready var i_frames_in_sec: float = 0.5
 @export var wait_time_floor: float = 1.25
-@export var wait_time_ceiling: float = 2.25
+@export var wait_time_ceiling: float = 2.0
 var current_oneshot_anim: String
 @export var attack_anim_damage_cutoff: float = 0.25
 @export var takedamage1_rootmotion_cutoff: float = 0.15
@@ -103,7 +103,7 @@ func _physics_process(delta: float) -> void:
 			
 			rotate_enemy_relocating(delta)
 			
-			print(nav_agent.is_target_reachable())
+			#print(nav_agent.is_target_reachable())
 			if nav_agent.is_target_reachable():
 				# if path_cast collides while relocating, restart timer and relocate again.
 				if path_cast.is_colliding():
@@ -361,12 +361,13 @@ func _on_guard_timer_timeout():
 
 # if relocate timer times out and a collision is found again, switch to RELOCATE state.
 func _on_relocate_timer_timeout():
-	if path_cast.is_colliding():
-		movement_state = EnemyMovementState.RELOCATE
-		$NavigationAgent3D.avoidance_enabled = false
-		relocate_pos = find_random_pos_around_target()
-		relocate_pos = Vector3(relocate_pos.x, targeted_player.global_position.y, relocate_pos.z)
-		nav_agent.set_target_position(relocate_pos)
+	if targeted_player != null:
+		if path_cast.is_colliding():
+			movement_state = EnemyMovementState.RELOCATE
+			$NavigationAgent3D.avoidance_enabled = false
+			relocate_pos = find_random_pos_around_target()
+			relocate_pos = Vector3(relocate_pos.x, targeted_player.global_position.y, relocate_pos.z)
+			nav_agent.set_target_position(relocate_pos)
 
 
 # finds a randomized position in a given circumference around a target. does not check if said position is valid on terrain.
