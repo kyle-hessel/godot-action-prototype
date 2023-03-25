@@ -23,6 +23,8 @@ var current_oneshot_anim: String
 @export var takedamage2_rootmotion_cutoff: float = 0.485
 var hit_received: bool = false
 var slide_away: bool = false
+var delta_cache: float
+var relocate_pos: Vector3
 
 @onready var anim_tree: AnimationTree = $AnimationTree
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
@@ -79,6 +81,7 @@ func _physics_process(delta: float) -> void:
 	if targeted_player != null:
 		# if we are tracking, follow the player.
 		if movement_state == EnemyMovementState.TRACK:
+			delta_cache = delta
 			# for whatever reason none of this logic works if abstracted into another function.
 			if !$GuardTimer.is_stopped():
 				$GuardTimer.stop()
@@ -88,6 +91,29 @@ func _physics_process(delta: float) -> void:
 			# face the player smoothly
 			rotate_enemy_tracking(delta)
 			
+			# if path_cast collides with an enemy, begin relocate timer to determine if relocation will occur.
+			if path_cast.is_colliding():
+				if $RelocateTimer.is_stopped():
+					$RelocateTimer.start()
+		
+		# if relocating, navigate to new relocation point. 
+		elif movement_state == EnemyMovementState.RELOCATE:
+			
+			execute_nav(delta, false)
+			
+			rotate_enemy_relocating(delta)
+			
+			print(nav_agent.is_target_reachable())
+			if nav_agent.is_target_reachable():
+				# if path_cast collides while relocating, restart timer and relocate again.
+				if path_cast.is_colliding():
+					if $RelocateTimer.is_stopped():
+						$RelocateTimer.start()
+			# if relocation target isn't reachable, just resume tracking.
+			else:
+				movement_state = EnemyMovementState.TRACK
+				$NavigationAgent3D.avoidance_enabled = true
+		
 		# if guarding, periodically check what the player is doing.
 		elif movement_state == EnemyMovementState.GUARD:
 			handle_guard_state(delta)
@@ -118,7 +144,7 @@ func apply_only_gravity(delta: float) -> void:
 
 
 # navigates to a player, relying on target_pos (updated from update_nav_target_pos)
-func execute_nav(delta: float) -> void:
+func execute_nav(delta: float, avoidance: bool = true) -> void:
 	var new_velocity: Vector3
 	# only navigate if the target can be reached.
 	if nav_agent.is_target_reachable():
@@ -129,20 +155,20 @@ func execute_nav(delta: float) -> void:
 	else:
 		new_velocity = Vector3(0.0, velocity.y, 0.0)
 	
-	# converts our newly calculated velocity to a 'safe velocity' that factors in other nearby agents, etc.
-	# see _on_navigation_agent_3d_velocity_computed.
-	nav_agent.set_velocity(new_velocity)
-	#apply_only_gravity(delta)
+	if avoidance:
+		# converts our newly calculated velocity to a 'safe velocity' that factors in other nearby agents, etc.
+		# see _on_navigation_agent_3d_velocity_computed.
+		nav_agent.set_velocity(new_velocity)
+	else:
+		velocity = new_velocity
+		apply_only_gravity(delta)
+		move_and_slide()
 	
 	#print(nav_agent.is_target_reachable())
 
 
-# called by the level itself, as of now Level.gd
+# called by the level itself, as of now Level.gd. For TRACK mode only.
 func update_nav_target_pos(target_pos: Vector3) -> void:
-	if path_cast.is_colliding():
-		for enemy in path_cast.collision_result:
-			print(enemy["collider"])
-	
 	# if tracking, move towards the player's position.
 	if movement_state == EnemyMovementState.TRACK:
 		nav_agent.set_target_position(target_pos)
@@ -279,6 +305,13 @@ func rotate_enemy_tracking(delta: float) -> void:
 	$EnemyMesh.rotation.z = 0.0;
 
 
+func rotate_enemy_relocating(delta: float) -> void:
+	face_object_lerp($EnemyMesh, relocate_pos, Vector3.UP, delta)
+	# zero out X and Z rotations so that the enemy can't rotate in odd ways.
+	$EnemyMesh.rotation.x = 0.0;
+	$EnemyMesh.rotation.z = 0.0;
+
+
 # determine how to move when applying root motion.
 func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
 	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
@@ -300,6 +333,7 @@ func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multipl
 func _on_navigation_agent_3d_target_reached():
 	if movement_state == EnemyMovementState.TRACK || movement_state == EnemyMovementState.RELOCATE:
 		movement_state = EnemyMovementState.GUARD
+		$NavigationAgent3D.avoidance_enabled = true
 		path_cast.enabled = false
 		# change this to decel
 		velocity = Vector3.ZERO
@@ -309,6 +343,7 @@ func _on_navigation_agent_3d_target_reached():
 func _on_navigation_agent_3d_velocity_computed(safe_velocity):
 	# smoother velocity with move_toward, helps with corners, etc
 	velocity = velocity.move_toward(safe_velocity, enemy_decel_rate)
+	apply_only_gravity(delta_cache)
 	move_and_slide()
 
 
@@ -324,6 +359,23 @@ func _on_guard_timer_timeout():
 			begin_attack()
 
 
+# if relocate timer times out and a collision is found again, switch to RELOCATE state.
+func _on_relocate_timer_timeout():
+	if path_cast.is_colliding():
+		movement_state = EnemyMovementState.RELOCATE
+		$NavigationAgent3D.avoidance_enabled = false
+		relocate_pos = find_random_pos_around_target()
+		relocate_pos = Vector3(relocate_pos.x, targeted_player.global_position.y, relocate_pos.z)
+		nav_agent.set_target_position(relocate_pos)
+
+
+# finds a randomized position in a given circumference around a target. does not check if said position is valid on terrain.
+func find_random_pos_around_target(radius: float = 7.0, target_pos: Vector3 = targeted_player.global_position) -> Vector3:
+	rng.randomize()
+	var random_angle: float = rng.randf_range(-180.0, 180.0)
+	return target_pos + target_pos.normalized().rotated(Vector3.UP, deg_to_rad(random_angle)) * radius
+
+
 func take_damage(amount: float, player_combo_stage: int) -> void:
 	# take damage.
 	enemy_health_current -= amount
@@ -334,6 +386,11 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 	if movement_state == EnemyMovementState.ATTACK:
 		var enemy_attack_anim: String = "parameters/" + current_oneshot_anim + "/request"
 		anim_tree.set(enemy_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+		
+	if movement_state == EnemyMovementState.RELOCATE:
+		$EnemyMesh.look_at(-targeted_player.global_position, Vector3.UP)
+		$EnemyMesh.rotation.x = 0.0;
+		$EnemyMesh.rotation.z = 0.0;
 		
 	# switch enemy state to damaged.
 	movement_state = EnemyMovementState.DAMAGED
@@ -472,5 +529,3 @@ func find_relative_direction(from: Vector3, to: Vector3) -> String:
 		return "front"
 	else:
 		return "?"
-
-
