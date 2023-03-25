@@ -15,8 +15,8 @@ var guard_player_distance: float = 32.0
 var rng := RandomNumberGenerator.new()
 var guard_time_rand: float
 @onready var i_frames_in_sec: float = 0.5
-@export var wait_time_floor: float = 1.5
-@export var wait_time_ceiling: float = 2.5
+@export var wait_time_floor: float = 1.25
+@export var wait_time_ceiling: float = 2.25
 var current_oneshot_anim: String
 @export var attack_anim_damage_cutoff: float = 0.25
 @export var takedamage1_rootmotion_cutoff: float = 0.15
@@ -27,8 +27,9 @@ var slide_away: bool = false
 @onready var anim_tree: AnimationTree = $AnimationTree
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
-@onready var combat_cast: ShapeCast3D = $EnemyMesh/CombatCast3D
-@onready var nearby_cast: RayCast3D = $EnemyMesh/NearbyCast3D
+@onready var combat_cast: ShapeCast3D = $EnemyMesh/CombatCast3D # for attacking
+@onready var nearby_cast: RayCast3D = $EnemyMesh/NearbyCast3D # for seeing when players are very close
+@onready var path_cast: ShapeCast3D = $EnemyMesh/PathCast3D # for seeing if other enemies are directly in front of the given enemy
 @onready var i_frames: Timer = $InvincibilityTimer
 
 var nearby_allies: Array[Node3D]
@@ -64,8 +65,10 @@ var movement_state: EnemyMovementState = EnemyMovementState.IDLE
 func _ready() -> void:
 	rng.randomize()
 	combat_cast.enabled = false
+	path_cast.enabled = false
 	combat_cast.add_exception($".") #'Exclude Parent' doesn't seem to work since combat_cast isn't a direct child of EnemyStarfiend, but instead its mesh.
 	nearby_cast.add_exception($".")
+	path_cast.add_exception($".")
 
 
 func _physics_process(delta: float) -> void:
@@ -136,6 +139,11 @@ func execute_nav(delta: float) -> void:
 
 # called by the level itself, as of now Level.gd
 func update_nav_target_pos(target_pos: Vector3) -> void:
+	if path_cast.is_colliding():
+		for enemy in path_cast.collision_result:
+			print(enemy["collider"])
+	
+	# if tracking, move towards the player's position.
 	if movement_state == EnemyMovementState.TRACK:
 		nav_agent.set_target_position(target_pos)
 
@@ -292,6 +300,7 @@ func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multipl
 func _on_navigation_agent_3d_target_reached():
 	if movement_state == EnemyMovementState.TRACK || movement_state == EnemyMovementState.RELOCATE:
 		movement_state = EnemyMovementState.GUARD
+		path_cast.enabled = false
 		# change this to decel
 		velocity = Vector3.ZERO
 
@@ -309,6 +318,7 @@ func _on_guard_timer_timeout():
 		var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 		if to_player.length_squared() > guard_player_distance:
 			movement_state = EnemyMovementState.TRACK
+			path_cast.enabled = true
 		# if the player is in range, attack!
 		else:
 			begin_attack()
@@ -339,6 +349,8 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 	
 	print("Enemy hurt! health: ", enemy_health_current)
 	
+	path_cast.enabled = false
+	
 	# begin enemy's i-frames.
 	i_frames.wait_time = i_frames_in_sec
 	i_frames.start()
@@ -354,6 +366,7 @@ func _on_animation_tree_animation_finished(anim_name):
 		if anim_name == "EnemyAttack1":
 			movement_state = EnemyMovementState.TRACK
 			combat_cast.enabled = false
+			path_cast.enabled = true
 	
 	# if ending taking damage, resume track or guard state if we have a player still, and idle if not.
 	elif movement_state == EnemyMovementState.DAMAGED:
@@ -364,6 +377,7 @@ func _on_animation_tree_animation_finished(anim_name):
 				var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 				if to_player.length_squared() > guard_player_distance:
 					movement_state = EnemyMovementState.TRACK
+					path_cast.enabled = true
 				else:
 					movement_state = EnemyMovementState.GUARD
 		else:
@@ -377,10 +391,13 @@ func _on_overlap_area_body_entered(body: Node3D):
 			targeted_player = body
 		else:
 			nearby_players.push_back(body)
+			
+		path_cast.add_exception(body)
 		
 		# if idling or roaming when a player comes into periphery, track them.
 		if movement_state == EnemyMovementState.IDLE || movement_state == EnemyMovementState.ROAMING:
 			movement_state = EnemyMovementState.TRACK
+			path_cast.enabled = true
 			
 	elif body is Enemy:
 		# don't be aware of self, of course. necessary because of collision layer junk.

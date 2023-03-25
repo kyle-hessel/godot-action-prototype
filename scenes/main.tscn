@@ -239,14 +239,14 @@ material = SubResource("StandardMaterial3D_kyei4")
 
 [node name="Enemies" type="Node3D" parent="."]
 
-[node name="EnemyStarfiend" parent="." instance=ExtResource("6_af7ak")]
+[node name="EnemyStarfiend" parent="Enemies" instance=ExtResource("6_af7ak")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.3469, 14.1866, 2.65404)
 
-[node name="EnemyStarfiend2" parent="." instance=ExtResource("6_af7ak")]
+[node name="EnemyStarfiend2" parent="Enemies" instance=ExtResource("6_af7ak")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.3052, 14.4908, -0.508535)
 
-[node name="EnemyStarfiend3" parent="." instance=ExtResource("6_af7ak")]
+[node name="EnemyStarfiend3" parent="Enemies" instance=ExtResource("6_af7ak")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.2615, 14.1866, 5.89291)
 
-[node name="EnemyStarfiend4" parent="." instance=ExtResource("6_af7ak")]
+[node name="EnemyStarfiend4" parent="Enemies" instance=ExtResource("6_af7ak")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.757944, 26.761, 14.9429)

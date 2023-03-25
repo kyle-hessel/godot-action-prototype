@@ -33,7 +33,7 @@ var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
 var current_oneshot_anim: String
-var attack_anim_damage_cutoff: float = 0.3
+var attack_anim_damage_cutoff: float = 0.25
 var hit_received: bool = false
 var targeting: bool = false
 var tracking: bool = false
@@ -751,8 +751,10 @@ func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_
 
 func _on_vanish_timer_timeout() -> void:
 	print("vanish")
-	current_weapon.visible = false
-	blending_weapon_state = true
+	# not sure if this fix introduces another issue or not, but trying it out.
+	if movement_state != PlayerMovementState.ATTACK:
+		current_weapon.visible = false
+		blending_weapon_state = true
 
 
 # hit registration on enemies
