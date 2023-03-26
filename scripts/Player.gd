@@ -51,6 +51,7 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var i_frames: Timer = $InvincibilityTimer
 @onready var current_weapon: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/WielderSword
 @onready var weapon_hitbox: Area3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/WielderSword/HitboxArea
+@onready var sword_trail: Trail3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand/WielderSword/SwordTrail3D
 @onready var target_icon: Sprite2D = $UI/TargetingIcon
 
 var viewport_width: int = ProjectSettings.get_setting("display/window/size/viewport_width")
@@ -70,8 +71,10 @@ enum PlayerMovementState {
 	SPRINT = 2,
 	ROLL = 3,
 	ATTACK = 4,
-	DAMAGED = 5,
-	DEAD = 6
+	PARRY = 5,
+	DAMAGED = 6,
+	STUN = 7,
+	DEAD = 8
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
@@ -86,6 +89,7 @@ func _ready():
 	
 	current_weapon.visible = false
 	weapon_hitbox.monitoring = false
+	sword_trail.trail_enabled = false
 	
 	# viewport-relative scaling for UI elements
 	target_icon.scale = Vector2(viewport_width * 0.00005, viewport_width * 0.00005)
@@ -421,7 +425,7 @@ func determine_target() -> void:
 							continue
 						# extra checks to ensure object is fit for targeting (this is why the for loop is necessary).
 						else:
-							print(obj)
+							#print(obj)
 							if object_visibility_check(obj) == true:
 								# if everything succeeded, retarget to the given object and break out.
 								targeted_object = obj
@@ -454,7 +458,7 @@ func determine_target() -> void:
 				# duplicate our original array and reverse it to maintain easy looping, now sorting from furthest to closest.
 				var overlapping_objects_reversed: Array[Node3D] = overlapping_objects.duplicate()
 				overlapping_objects_reversed.reverse()
-				print(overlapping_objects_reversed)
+				#print(overlapping_objects_reversed)
 				
 				# fetch our current target's new array position.
 				var obj_index: int = overlapping_objects_reversed.find(targeted_object)
@@ -469,7 +473,7 @@ func determine_target() -> void:
 							continue
 						# extra checks to ensure object is fit for targeting.
 						else:
-							print(obj)
+							#print(obj)
 							if object_visibility_check(obj) == true:
 								# if everything succeeded, retarget to the given object and break out.
 								targeted_object = obj
@@ -609,6 +613,7 @@ func handle_weapon_actions(event) -> void:
 					anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 					current_oneshot_anim = "AttackGroundShot1"
 					current_weapon.visible = true
+					sword_trail.trail_enabled = true
 					weapon_hitbox.monitoring = true
 					# swap to holding weapon animations
 					weapon_blend = 1 # no blend needed since we launch straight into an attack anim
@@ -631,9 +636,10 @@ func handle_weapon_actions(event) -> void:
 				if movement_state != PlayerMovementState.ATTACK:
 	#				movement_state = PlayerMovementState.ATTACK
 	#				player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
-	
+
 	#				anim_tree.set("parameters/AttackMidairShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	#				current_weapon.visible = true
+	#				sword_trail.trail_enabled = true
 	#				weapon_hitbox.monitoring = true
 					# swap to holding weapon animations
 	#				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
@@ -752,8 +758,10 @@ func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_
 func _on_vanish_timer_timeout() -> void:
 	print("vanish")
 	# not sure if this fix introduces another issue or not, but trying it out.
+	# probably creates an edge case where the sword never vanishes, lol
 	if movement_state != PlayerMovementState.ATTACK:
 		current_weapon.visible = false
+		sword_trail.trail_enabled = false
 		blending_weapon_state = true
 
 

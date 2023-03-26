@@ -50,8 +50,9 @@ enum EnemyMovementState {
 	GUARD = 4,
 	ATTACK = 5,
 	DAMAGED = 6,
-	FLEE = 7,
-	DEAD = 8
+	STUN = 7,
+	FLEE = 8,
+	DEAD = 9
 }
 
 enum EnemyType {
