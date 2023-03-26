@@ -274,6 +274,7 @@ func handle_damaged_state(delta: float) -> void:
 		if anim_progress > takedamage1_rootmotion_cutoff && !is_on_floor():
 			apply_only_gravity(delta)
 			reset_velocity = false
+			slide_away = false
 		else:
 			handle_root_motion(delta, root_motion_multiplier * 0.9)
 			
@@ -283,6 +284,7 @@ func handle_damaged_state(delta: float) -> void:
 		if anim_progress > takedamage2_rootmotion_cutoff && !is_on_floor():
 			apply_only_gravity(delta)
 			reset_velocity = false
+			slide_away = false
 		else:
 			# enemy's own root motion
 			handle_root_motion(delta, root_motion_multiplier * 0.9)
