@@ -32,6 +32,7 @@ var relocate_pos: Vector3
 @onready var combat_cast: ShapeCast3D = $EnemyMesh/CombatCast3D # for attacking
 @onready var nearby_cast: RayCast3D = $EnemyMesh/NearbyCast3D # for seeing when players are very close
 @onready var path_cast: ShapeCast3D = $EnemyMesh/PathCast3D # for seeing if other enemies are directly in front of the given enemy
+@onready var hit_particles: GPUParticles3D = $EnemyMesh/HitParticles3D
 @onready var i_frames: Timer = $InvincibilityTimer
 
 var nearby_allies: Array[Node3D]
@@ -399,6 +400,7 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 	# switch enemy state to damaged.
 	movement_state = EnemyMovementState.DAMAGED
 	velocity = Vector3.ZERO
+	hit_particles.emitting = true # only have to set once, due to particles being a one-shot.
 	
 	# determine which hit animation enemy plays. move damage into this as well later so that it varies.
 	if player_combo_stage > 2:
