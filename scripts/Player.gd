@@ -787,7 +787,15 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 					# do this per-object so that attacks can hit multiple enemies at once.
 					body.hit_received = true
 					# inflict damage on the enemy, let them handle the details.
-					body.take_damage(player_damage_stat, attack_combo_stage)
+					var damage_result: String = body.take_damage(player_damage_stat, attack_combo_stage)
+					
+					# if enemy dies from this hit, drop targeting and remove them from overlapping objects.
+					if damage_result == "dead":
+						targeted_object = null
+						targeting = false
+						tracking = false
+						target_icon.visible = false
+						overlapping_objects.erase(body)
 
 
 func take_damage(amount: float, enemy_forward_vector: Vector3) -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3 uid="uid://wr13h1xbxd0v"]
+[gd_scene load_steps=40 format=3 uid="uid://wr13h1xbxd0v"]
 
 [ext_resource type="PackedScene" uid="uid://cc7svareltvw7" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Level.gd" id="1_wxnjq"]
@@ -11,6 +11,9 @@
 [ext_resource type="Shader" path="res://shaders/experimental/canvas_pp_test.gdshader" id="7_e30dh"]
 [ext_resource type="Texture2D" uid="uid://cmq87abrni1at" path="res://3D_models/textures/kenney_prototype-textures/PNG/Orange/texture_01.png" id="7_ypp5c"]
 [ext_resource type="Texture2D" uid="uid://c2vs766qsvc26" path="res://3D_models/textures/kenney_prototype-textures/PNG/Light/texture_08.png" id="8_amvko"]
+[ext_resource type="Shader" uid="uid://bk4dlqdacny0p" path="res://shaders/dissolve_shader.tres" id="12_vum63"]
+[ext_resource type="Shader" uid="uid://jt23cahyvxnv" path="res://shaders/stars_visual1_triplanar.tres" id="13_bv66d"]
+[ext_resource type="Texture2D" uid="uid://d1qko580ph01p" path="res://shaders/textures/hurlnoise1.png" id="14_hvhqc"]
 
 [sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_8bey6"]
 
@@ -138,6 +141,32 @@ uv1_triplanar = true
 albedo_texture = ExtResource("6_rgnkl")
 uv1_triplanar = true
 
+[sub_resource type="SphereMesh" id="SphereMesh_dph5r"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_y7y7m"]
+render_priority = 0
+shader = ExtResource("12_vum63")
+shader_parameter/VoidAmount = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_b1eo8"]
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_y7y7m")
+shader = ExtResource("13_bv66d")
+shader_parameter/GradientCol1 = Color(1, 0.384314, 0.937255, 1)
+shader_parameter/GradientCol2 = Color(0.470588, 0.470588, 0.996078, 1)
+shader_parameter/BaseGradientPower = 0.75
+shader_parameter/GradientRotSpeed = 70.0
+shader_parameter/StarColor = Color(0.610975, 0.818244, 0.994703, 1)
+shader_parameter/NoiseScale = Vector2(1, 1)
+shader_parameter/NoiseRotSpeed = 35.0
+shader_parameter/GlitterOffset = 0.75
+shader_parameter/FresnelColor = Color(0.215009, 0.235149, 0.754815, 1)
+shader_parameter/FresnelPower = 3.0
+shader_parameter/triplanar_scale = Vector3(1, 1, 1)
+shader_parameter/triplanar_offset = null
+shader_parameter/triplanar_sharpness = 0.5
+shader_parameter/NoiseTextureTriplanar = ExtResource("14_hvhqc")
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_wxnjq")
 
@@ -250,3 +279,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.2615, 14.1866, 5.89291)
 
 [node name="EnemyStarfiend4" parent="Enemies" instance=ExtResource("6_af7ak")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.757944, 26.761, 14.9429)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.13082, 15.8552, -22.4127)
+sorting_offset = 102.0
+mesh = SubResource("SphereMesh_dph5r")
+surface_material_override/0 = SubResource("ShaderMaterial_b1eo8")

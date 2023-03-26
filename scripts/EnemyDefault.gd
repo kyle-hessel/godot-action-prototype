@@ -25,7 +25,11 @@ var hit_received: bool = false
 var slide_away: bool = false
 var delta_cache: float
 var relocate_pos: Vector3
+var void_amount: float = 1.0
+var void_amount_max: float = 5.0
+var void_increment: float = 1.0
 
+@export var enemy_mesh: MeshInstance3D
 @onready var anim_tree: AnimationTree = $AnimationTree
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
@@ -67,6 +71,9 @@ var movement_state: EnemyMovementState = EnemyMovementState.IDLE
 @export var enemy_type: EnemyType # set per enemy type in editor
 
 func _ready() -> void:
+	enemy_mesh.get_surface_override_material(0).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
+	enemy_mesh.get_surface_override_material(1).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
+	
 	rng.randomize()
 	combat_cast.enabled = false
 	path_cast.enabled = false
@@ -78,66 +85,74 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	#print(velocity.length())
 	#print(is_on_floor())
-	anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
-	# if there is a player, do something
-	if targeted_player != null:
-		# if we are tracking, follow the player.
-		if movement_state == EnemyMovementState.TRACK:
-			delta_cache = delta
-			# for whatever reason none of this logic works if abstracted into another function.
-			if !$GuardTimer.is_stopped():
-				$GuardTimer.stop()
-			
-			execute_nav(delta)
-			
-			# face the player smoothly
-			rotate_enemy_tracking(delta)
-			
-			# if path_cast collides with an enemy, begin relocate timer to determine if relocation will occur.
-			if path_cast.is_colliding():
-				if $RelocateTimer.is_stopped():
-					$RelocateTimer.start()
-		
-		# if relocating, navigate to new relocation point. 
-		elif movement_state == EnemyMovementState.RELOCATE:
-			
-			execute_nav(delta, false)
-			
-			rotate_enemy_relocating(delta)
-			
-			#print(nav_agent.is_target_reachable())
-			if nav_agent.is_target_reachable():
-				# if path_cast collides while relocating, restart timer and relocate again.
+	
+	# if dead, stay dead.
+	if movement_state == EnemyMovementState.DEAD:
+		handle_dead_state(delta)
+	# if not dead, do something.
+	else:
+		anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
+		# if there is a player, do something
+		if targeted_player != null:
+			# if we are tracking, follow the player.
+			if movement_state == EnemyMovementState.TRACK:
+				delta_cache = delta
+				# for whatever reason none of this logic works if abstracted into another function.
+				if !$GuardTimer.is_stopped():
+					$GuardTimer.stop()
+				
+				execute_nav(delta)
+				
+				# face the player smoothly
+				rotate_enemy_tracking(delta)
+				
+				# if path_cast collides with an enemy, begin relocate timer to determine if relocation will occur.
 				if path_cast.is_colliding():
 					if $RelocateTimer.is_stopped():
 						$RelocateTimer.start()
-			# if relocation target isn't reachable, just resume tracking.
-			else:
-				movement_state = EnemyMovementState.TRACK
-				$NavigationAgent3D.avoidance_enabled = true
-		
-		# if guarding, periodically check what the player is doing.
-		elif movement_state == EnemyMovementState.GUARD:
-			handle_guard_state(delta)
-		
-		elif movement_state == EnemyMovementState.ATTACK:
-			handle_attack_state(delta)
-		
-		elif movement_state == EnemyMovementState.DAMAGED:
-			handle_damaged_state(delta)
 			
-		#print(movement_state)
-	# if there's no player, just be still. (add roaming here later)
-	else:
-		movement_state = EnemyMovementState.IDLE
-		apply_only_gravity(delta)
-		
-		if is_on_floor():
-			velocity = Vector3.ZERO
+			# if relocating, navigate to new relocation point. 
+			elif movement_state == EnemyMovementState.RELOCATE:
+				
+				execute_nav(delta, false)
+				
+				rotate_enemy_relocating(delta)
+				
+				#print(nav_agent.is_target_reachable())
+				if nav_agent.is_target_reachable():
+					# if path_cast collides while relocating, restart timer and relocate again.
+					if path_cast.is_colliding():
+						if $RelocateTimer.is_stopped():
+							$RelocateTimer.start()
+				# if relocation target isn't reachable, just resume tracking.
+				else:
+					movement_state = EnemyMovementState.TRACK
+					$NavigationAgent3D.avoidance_enabled = true
+			
+			# if guarding, periodically check what the player is doing.
+			elif movement_state == EnemyMovementState.GUARD:
+				handle_guard_state(delta)
+			
+			elif movement_state == EnemyMovementState.ATTACK:
+				handle_attack_state(delta)
+			
+			# this state only being called when there is a targeted player could cause issues at distance if such a scenario occurs.
+			elif movement_state == EnemyMovementState.DAMAGED:
+				handle_damaged_state(delta)
+			
+			#print(movement_state)
+		# if there's no player, just be still. (add roaming here later)
 		else:
-			velocity = Vector3(0.0, velocity.y, 0.0)
+			movement_state = EnemyMovementState.IDLE
+			apply_only_gravity(delta)
+			
+			if is_on_floor():
+				velocity = Vector3.ZERO
+			else:
+				velocity = Vector3(0.0, velocity.y, 0.0)
+			
+			move_and_slide()
 		
-		move_and_slide()
 
 
 func apply_only_gravity(delta: float) -> void:
@@ -302,6 +317,24 @@ func handle_damaged_state(delta: float) -> void:
 		velocity = Vector3.ZERO
 
 
+func handle_dead_state(delta: float) -> void:
+	# death particle/shader effects
+	if void_amount < void_amount_max:
+		void_amount += void_increment * delta
+	else:
+		void_amount = void_amount_max
+		
+	if void_amount > void_amount_max * 0.25 && void_amount < void_amount_max - 0.1:
+		hit_particles.emitting = true
+	
+	enemy_mesh.get_surface_override_material(1).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
+	enemy_mesh.get_surface_override_material(0).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
+	
+	# just add gravity in case of dying in midair
+	apply_only_gravity(delta)
+	move_and_slide()
+
+
 func rotate_enemy_tracking(delta: float) -> void:
 	face_object_lerp($EnemyMesh, targeted_player.position, Vector3.UP, delta)
 	# zero out X and Z rotations so that the enemy can't rotate in odd ways.
@@ -352,7 +385,7 @@ func _on_navigation_agent_3d_velocity_computed(safe_velocity):
 
 
 func _on_guard_timer_timeout():
-	if targeted_player != null:
+	if targeted_player != null && movement_state != EnemyMovementState.DEAD:
 		# if the player gets too far away, resume tracking.
 		var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 		if to_player.length_squared() > guard_player_distance:
@@ -365,7 +398,7 @@ func _on_guard_timer_timeout():
 
 # if relocate timer times out and a collision is found again, switch to RELOCATE state.
 func _on_relocate_timer_timeout():
-	if targeted_player != null:
+	if targeted_player != null && movement_state != EnemyMovementState.DEAD:
 		if path_cast.is_colliding():
 			movement_state = EnemyMovementState.RELOCATE
 			$NavigationAgent3D.avoidance_enabled = false
@@ -381,7 +414,7 @@ func find_random_pos_around_target(radius: float = 7.0, target_pos: Vector3 = ta
 	return target_pos + target_pos.normalized().rotated(Vector3.UP, deg_to_rad(random_angle)) * radius
 
 
-func take_damage(amount: float, player_combo_stage: int) -> void:
+func take_damage(amount: float, player_combo_stage: int) -> String:
 	# take damage.
 	enemy_health_current -= amount
 	enemy_health_current = clamp(enemy_health_current, 0.0, enemy_health_max)
@@ -394,13 +427,19 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 		
 	if movement_state == EnemyMovementState.RELOCATE:
 		$EnemyMesh.look_at(-targeted_player.global_position, Vector3.UP)
-		$EnemyMesh.rotation.x = 0.0;
-		$EnemyMesh.rotation.z = 0.0;
+		$EnemyMesh.rotation.x = 0.0
+		$EnemyMesh.rotation.z = 0.0
+	
+	velocity = Vector3.ZERO
+	hit_particles.emitting = true # only have to set once, due to particles being a one-shot.
+	
+	# if enemy is dead, early out of this function and instead call die after damage is dealt.
+	if enemy_health_current == 0.0:
+		die()
+		return "dead"
 		
 	# switch enemy state to damaged.
 	movement_state = EnemyMovementState.DAMAGED
-	velocity = Vector3.ZERO
-	hit_particles.emitting = true # only have to set once, due to particles being a one-shot.
 	
 	# determine which hit animation enemy plays. move damage into this as well later so that it varies.
 	if player_combo_stage > 2:
@@ -417,6 +456,26 @@ func take_damage(amount: float, player_combo_stage: int) -> void:
 	# begin enemy's i-frames.
 	i_frames.wait_time = i_frames_in_sec
 	i_frames.start()
+	
+	return "alive"
+
+
+func die() -> void:
+	# disable most collisions so that the enemy can't pick up the player and vice versa.
+	set_collision_layer_value(2, false)
+	set_collision_layer_value(3, false)
+	set_collision_mask_value(3, false)
+	$OverlapArea.set_collision_layer_value(3, false)
+	$OverlapArea.set_collision_mask_value(3, false)
+	
+	movement_state = EnemyMovementState.DEAD
+	velocity = Vector3.ZERO
+	path_cast.enabled = false
+	nearby_cast.enabled = false
+	combat_cast.enabled = false
+	gravity_multiplier *= 0.5
+	hit_particles.amount = 50
+	print("enemy ded!")
 
 
 func _on_animation_tree_animation_finished(anim_name):

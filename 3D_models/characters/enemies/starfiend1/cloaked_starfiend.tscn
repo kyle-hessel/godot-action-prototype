@@ -1,9 +1,11 @@
-[gd_scene load_steps=27 format=3 uid="uid://d0u2klrdb7y18"]
+[gd_scene load_steps=43 format=3 uid="uid://d0u2klrdb7y18"]
 
 [ext_resource type="Script" path="res://scripts/EnemyDefault.gd" id="1_wg42t"]
 [ext_resource type="PackedScene" uid="uid://dyr50lkw6uyu7" path="res://3D_models/characters/enemies/starfiend1/starfiend1.glb" id="2_x0cfg"]
 [ext_resource type="Shader" uid="uid://jt23cahyvxnv" path="res://shaders/stars_visual1_triplanar.tres" id="3_uty3i"]
+[ext_resource type="Texture2D" uid="uid://chhrcifg7twsw" path="res://shaders/textures/simplex_noise1.tres" id="3_xjpik"]
 [ext_resource type="Texture2D" uid="uid://d1qko580ph01p" path="res://shaders/textures/hurlnoise1.png" id="4_imhgg"]
+[ext_resource type="Shader" uid="uid://bk4dlqdacny0p" path="res://shaders/dissolve_shader.tres" id="5_nevxk"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_ue7u5"]
 radius = 0.4
@@ -12,8 +14,143 @@ height = 1.96957
 [sub_resource type="SphereShape3D" id="SphereShape3D_gu3um"]
 radius = 12.25
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_hcphk"]
+[sub_resource type="VisualShaderNodeFloatFunc" id="VisualShaderNodeFloatFunc_j6qfx"]
+function = 15
+
+[sub_resource type="VisualShaderNodeFloatFunc" id="VisualShaderNodeFloatFunc_cp6ei"]
+function = 31
+
+[sub_resource type="VisualShaderNodeFloatFunc" id="VisualShaderNodeFloatFunc_arg8w"]
+function = 15
+
+[sub_resource type="VisualShaderNodeVectorOp" id="VisualShaderNodeVectorOp_tuw55"]
+output_port_for_preview = 0
+operator = 2
+
+[sub_resource type="VisualShaderNodeColorConstant" id="VisualShaderNodeColorConstant_vpk6k"]
+constant = Color(0.299523, 0.329678, 0.733534, 1)
+
+[sub_resource type="VisualShaderNodeFloatParameter" id="VisualShaderNodeFloatParameter_kvqp0"]
+parameter_name = "VoidAmount"
+default_value_enabled = true
+default_value = 1.0
+
+[sub_resource type="VisualShaderNodeInput" id="VisualShaderNodeInput_xfj70"]
+input_name = "uv"
+
+[sub_resource type="VisualShaderNodeFloatFunc" id="VisualShaderNodeFloatFunc_b0sbg"]
+function = 0
+
+[sub_resource type="VisualShaderNodeFloatOp" id="VisualShaderNodeFloatOp_kofvc"]
+default_input_values = [0, 0.0, 1, 2.0]
+operator = 3
+
+[sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_ikq4u"]
+texture = ExtResource("3_xjpik")
+
+[sub_resource type="VisualShaderNodeFloatOp" id="VisualShaderNodeFloatOp_2debm"]
+operator = 1
+
+[sub_resource type="VisualShader" id="VisualShader_kre5w"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+uniform sampler2D tex_frg_8;
+uniform float VoidAmount = 1;
+
+
+
+void fragment() {
+// Input:2
+	vec2 n_out2p0 = UV;
+
+
+// Texture2D:8
+	vec4 n_out8p0 = texture(tex_frg_8, n_out2p0);
+
+
+// FloatParameter:16
+	float n_out16p0 = VoidAmount;
+
+
+// FloatFunc:5
+	float n_out5p0 = sin(n_out16p0);
+
+
+// FloatOp:6
+	float n_in6p1 = 2.00000;
+	float n_out6p0 = n_out5p0 / n_in6p1;
+
+
+// FloatOp:9
+	float n_out9p0 = n_out8p0.x - n_out6p0;
+
+
+// FloatFunc:12
+	float n_out12p0 = 1.0 - n_out9p0;
+
+
+// FloatFunc:13
+	float n_out13p0 = round(n_out12p0);
+
+
+// ColorConstant:15
+	vec4 n_out15p0 = vec4(0.299523, 0.329678, 0.733534, 1.000000);
+
+
+// VectorOp:14
+	vec3 n_out14p0 = vec3(n_out13p0) * vec3(n_out15p0.xyz);
+
+
+// FloatFunc:10
+	float n_out10p0 = round(n_out9p0);
+
+
+// Output:0
+	ALBEDO = n_out14p0;
+	ALPHA = n_out10p0;
+	EMISSION = n_out14p0;
+
+
+}
+"
+graph_offset = Vector2(-1883, -98)
+flags/unshaded = true
+nodes/fragment/0/position = Vector2(420, 160)
+nodes/fragment/2/node = SubResource("VisualShaderNodeInput_xfj70")
+nodes/fragment/2/position = Vector2(-1360, 40)
+nodes/fragment/5/node = SubResource("VisualShaderNodeFloatFunc_b0sbg")
+nodes/fragment/5/position = Vector2(-1160, 240)
+nodes/fragment/6/node = SubResource("VisualShaderNodeFloatOp_kofvc")
+nodes/fragment/6/position = Vector2(-940, 220)
+nodes/fragment/8/node = SubResource("VisualShaderNodeTexture_ikq4u")
+nodes/fragment/8/position = Vector2(-960, -80)
+nodes/fragment/9/node = SubResource("VisualShaderNodeFloatOp_2debm")
+nodes/fragment/9/position = Vector2(-680, 140)
+nodes/fragment/10/node = SubResource("VisualShaderNodeFloatFunc_j6qfx")
+nodes/fragment/10/position = Vector2(-360, 180)
+nodes/fragment/12/node = SubResource("VisualShaderNodeFloatFunc_cp6ei")
+nodes/fragment/12/position = Vector2(-420, 360)
+nodes/fragment/13/node = SubResource("VisualShaderNodeFloatFunc_arg8w")
+nodes/fragment/13/position = Vector2(-220, 360)
+nodes/fragment/14/node = SubResource("VisualShaderNodeVectorOp_tuw55")
+nodes/fragment/14/position = Vector2(0, 360)
+nodes/fragment/15/node = SubResource("VisualShaderNodeColorConstant_vpk6k")
+nodes/fragment/15/position = Vector2(-220, 520)
+nodes/fragment/16/node = SubResource("VisualShaderNodeFloatParameter_kvqp0")
+nodes/fragment/16/position = Vector2(-1580, 240)
+nodes/fragment/connections = PackedInt32Array(5, 0, 6, 0, 8, 0, 9, 0, 9, 0, 10, 0, 6, 0, 9, 1, 2, 0, 8, 0, 10, 0, 0, 1, 12, 0, 13, 0, 15, 0, 14, 1, 14, 0, 0, 5, 13, 0, 14, 0, 9, 0, 12, 0, 14, 0, 0, 0, 16, 0, 5, 0)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_defmm"]
+resource_local_to_scene = true
 render_priority = 0
+shader = SubResource("VisualShader_kre5w")
+shader_parameter/VoidAmount = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hcphk"]
+resource_local_to_scene = true
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_defmm")
 shader = ExtResource("3_uty3i")
 shader_parameter/GradientCol1 = Color(1, 0.494118, 0.941176, 1)
 shader_parameter/GradientCol2 = Color(0.243137, 0.0509804, 0.788235, 1)
@@ -30,8 +167,16 @@ shader_parameter/triplanar_offset = null
 shader_parameter/triplanar_sharpness = 0.5
 shader_parameter/NoiseTextureTriplanar = ExtResource("4_imhgg")
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_gncrl"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6lv86"]
+resource_local_to_scene = true
 render_priority = 0
+shader = ExtResource("5_nevxk")
+shader_parameter/VoidAmount = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_gncrl"]
+resource_local_to_scene = true
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_6lv86")
 shader = ExtResource("3_uty3i")
 shader_parameter/GradientCol1 = Color(0.647059, 0.137255, 0.196078, 1)
 shader_parameter/GradientCol2 = Color(0.0980392, 0.00784314, 0.352941, 1)
@@ -147,10 +292,11 @@ nodes/TakeDamageShot2/position = Vector2(660, 100)
 nodes/output/position = Vector2(940, 100)
 node_connections = [&"output", 0, &"TakeDamageShot2", &"AttackShot1", 0, &"IdleRunBlendspace", &"AttackShot1", 1, &"EnemyAttack1", &"TakeDamageShot1", 0, &"AttackShot1", &"TakeDamageShot1", 1, &"TakeDamage1", &"TakeDamageShot2", 0, &"TakeDamageShot1", &"TakeDamageShot2", 1, &"TakeDamage2"]
 
-[node name="EnemyStarfiend" type="CharacterBody3D" groups=["enemies"]]
+[node name="EnemyStarfiend" type="CharacterBody3D" node_paths=PackedStringArray("enemy_mesh") groups=["enemies"]]
 collision_layer = 6
 collision_mask = 5
 script = ExtResource("1_wg42t")
+enemy_mesh = NodePath("EnemyMesh/Armature/Skeleton3D/character")
 enemy_type = 1
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
@@ -190,76 +336,76 @@ one_shot = true
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
 
 [node name="Skeleton3D" parent="EnemyMesh/Armature" index="0"]
-bones/1/position = Vector3(5.72702e-05, 0.0659608, 0.744627)
-bones/1/rotation = Quaternion(0.843677, -0.0631212, -0.101348, 0.523405)
-bones/2/rotation = Quaternion(-0.17575, 0.0813865, 0.0149198, 0.980951)
-bones/3/rotation = Quaternion(-0.0171474, -0.0349212, -0.0116288, 0.999175)
-bones/4/rotation = Quaternion(0.0459229, -0.034118, -0.0138087, 0.998267)
+bones/1/position = Vector3(-0.000242058, 0.0659429, 0.743337)
+bones/1/rotation = Quaternion(0.843496, -0.0625954, -0.102529, 0.523531)
+bones/2/rotation = Quaternion(-0.175587, 0.0817698, 0.0156874, 0.980937)
+bones/3/rotation = Quaternion(-0.0171835, -0.0349991, -0.0120347, 0.999167)
+bones/4/rotation = Quaternion(0.0458864, -0.0341702, -0.0142187, 0.998261)
 bones/5/rotation = Quaternion(0.218714, -0.000501253, -0.00275755, 0.975785)
 bones/6/rotation = Quaternion(-0.261097, 0.0847894, -0.00554346, 0.961566)
 bones/27/rotation = Quaternion(-0.549751, -0.425278, -0.511756, 0.504993)
-bones/28/rotation = Quaternion(-0.323804, 0.11546, 0.0921073, 0.934525)
-bones/29/rotation = Quaternion(-0.0867803, -0.128049, -0.645015, 0.74835)
-bones/30/rotation = Quaternion(-0.035602, -0.0545075, 0.0757219, 0.995001)
-bones/31/position = Vector3(-0.0256553, 0.298776, -0.00207602)
-bones/31/rotation = Quaternion(-0.0436074, -0.0563568, 0.200986, 0.976999)
+bones/28/rotation = Quaternion(-0.320695, 0.115151, 0.0932446, 0.935521)
+bones/29/rotation = Quaternion(-0.0889947, -0.129076, -0.649571, 0.74396)
+bones/30/rotation = Quaternion(-0.0370238, -0.0533281, 0.0759006, 0.995)
+bones/31/position = Vector3(-0.0256897, 0.298747, -0.00209338)
+bones/31/rotation = Quaternion(-0.0448675, -0.0550075, 0.201175, 0.97698)
 bones/32/rotation = Quaternion(-0.0111358, 0.101611, -0.023095, 0.994494)
 bones/33/rotation = Quaternion(-0.31708, -0.0193989, -0.0452215, 0.947121)
 bones/34/rotation = Quaternion(-0.29798, 0.0267635, 0.00240571, 0.954194)
-bones/35/position = Vector3(-0.0107857, 0.306987, 0.0018847)
-bones/35/rotation = Quaternion(-0.0528435, -0.0386583, 0.142381, 0.987644)
+bones/35/position = Vector3(-0.0107804, 0.306986, 0.00193314)
+bones/35/rotation = Quaternion(-0.0541836, -0.037387, 0.142554, 0.987595)
 bones/36/rotation = Quaternion(-0.0558494, 0.0505379, -0.0145158, 0.997054)
 bones/37/rotation = Quaternion(-0.298771, 0.0297168, -0.00890658, 0.953821)
 bones/38/rotation = Quaternion(-0.330013, 0.024299, 0.00435061, 0.943654)
-bones/39/position = Vector3(0.00497054, 0.310965, 0.000667628)
-bones/39/rotation = Quaternion(-0.0676137, -0.0710185, 0.0736886, 0.992449)
+bones/39/position = Vector3(0.00496626, 0.310967, 0.000549981)
+bones/39/rotation = Quaternion(-0.0690328, -0.0698468, 0.0739265, 0.992417)
 bones/40/rotation = Quaternion(-0.0514343, 0.0716565, 0.0265078, 0.99575)
 bones/41/rotation = Quaternion(-0.297604, 0.0310896, 0.0274992, 0.953787)
 bones/42/rotation = Quaternion(-0.311095, 0.0287159, 0.0148469, 0.949829)
-bones/43/position = Vector3(0.0180258, 0.310464, -0.00251502)
-bones/43/rotation = Quaternion(-0.0916781, -0.0568614, -0.0246231, 0.993859)
+bones/43/position = Vector3(0.0180076, 0.31046, -0.00273304)
+bones/43/rotation = Quaternion(-0.0932055, -0.0558384, -0.0243806, 0.993781)
 bones/44/rotation = Quaternion(-0.0701552, 0.0604205, 0.0864479, 0.991945)
 bones/45/rotation = Quaternion(-0.202612, 0.0812072, 0.0394862, 0.975087)
 bones/46/rotation = Quaternion(-0.340802, 0.017169, -0.0135365, 0.939881)
-bones/47/position = Vector3(0.0336432, 0.316031, -0.0303334)
-bones/47/rotation = Quaternion(-0.0954229, 0.515974, -0.383178, 0.760158)
+bones/47/position = Vector3(0.0336402, 0.316028, -0.0303423)
+bones/47/rotation = Quaternion(-0.0970144, 0.516203, -0.383812, 0.759481)
 bones/48/rotation = Quaternion(-0.273369, 0.153228, 0.0491889, 0.948352)
 bones/49/rotation = Quaternion(-0.24514, 0.0657149, 0.0854092, 0.96348)
 bones/50/rotation = Quaternion(-0.522121, 0.448157, 0.474904, 0.548644)
-bones/51/rotation = Quaternion(-0.392116, -0.280723, 0.0727571, 0.87301)
-bones/52/rotation = Quaternion(-0.0396854, 0.100906, 0.5049, 0.85634)
-bones/53/rotation = Quaternion(-0.0132351, 0.274819, -0.00181468, 0.961403)
-bones/54/position = Vector3(0.0189321, 0.30207, -0.00940352)
-bones/54/rotation = Quaternion(-0.0496904, 0.277357, -0.122855, 0.951583)
+bones/51/rotation = Quaternion(-0.390753, -0.282785, 0.0694914, 0.873222)
+bones/52/rotation = Quaternion(-0.0386179, 0.0983494, 0.508443, 0.854589)
+bones/53/rotation = Quaternion(-0.0142327, 0.276887, -0.00690876, 0.960772)
+bones/54/position = Vector3(0.0191982, 0.301856, -0.00963558)
+bones/54/rotation = Quaternion(-0.0509061, 0.279288, -0.127831, 0.950298)
 bones/55/rotation = Quaternion(-0.0111358, -0.101611, 0.023095, 0.994494)
 bones/56/rotation = Quaternion(-0.317081, 0.019399, 0.0452215, 0.947121)
 bones/57/rotation = Quaternion(-0.29798, -0.0267636, -0.00240575, 0.954194)
-bones/58/position = Vector3(0.00635239, 0.307964, 0.00126602)
-bones/58/rotation = Quaternion(-0.0441198, 0.259495, -0.0639103, 0.962617)
+bones/58/position = Vector3(0.00671487, 0.30791, 0.00105688)
+bones/58/rotation = Quaternion(-0.0453212, 0.261562, -0.0689081, 0.961657)
 bones/59/rotation = Quaternion(-0.0558495, -0.0505379, 0.0145158, 0.997054)
 bones/60/rotation = Quaternion(-0.298771, -0.0297167, 0.00890657, 0.953821)
 bones/61/rotation = Quaternion(-0.330013, -0.024299, -0.00435057, 0.943654)
-bones/62/position = Vector3(-0.00863679, 0.309772, 0.00723823)
-bones/62/rotation = Quaternion(-0.0450343, 0.288237, 0.00779964, 0.956468)
+bones/62/position = Vector3(-0.00827099, 0.309869, 0.00709424)
+bones/62/rotation = Quaternion(-0.0459372, 0.290465, 0.00276328, 0.955779)
 bones/63/rotation = Quaternion(-0.0514343, -0.0716565, -0.0265078, 0.99575)
 bones/64/rotation = Quaternion(-0.297604, -0.0310895, -0.0274991, 0.953787)
 bones/65/rotation = Quaternion(-0.311095, -0.028716, -0.0148469, 0.949829)
-bones/66/position = Vector3(-0.0215905, 0.307619, 0.0100113)
-bones/66/rotation = Quaternion(-0.0456704, 0.26919, 0.108215, 0.955898)
+bones/66/position = Vector3(-0.0212309, 0.307832, 0.00992299)
+bones/66/rotation = Quaternion(-0.0464501, 0.271657, 0.103226, 0.955714)
 bones/67/rotation = Quaternion(-0.0701552, -0.0604204, -0.0864479, 0.991945)
 bones/68/rotation = Quaternion(-0.202612, -0.0812071, -0.0394862, 0.975087)
 bones/69/rotation = Quaternion(-0.340802, -0.017169, 0.0135365, 0.939881)
-bones/70/position = Vector3(-0.0482453, 0.312437, -0.00765146)
-bones/70/rotation = Quaternion(0.0559953, -0.354798, 0.419227, 0.833805)
+bones/70/position = Vector3(-0.0478809, 0.312825, -0.00766256)
+bones/70/rotation = Quaternion(0.0532514, -0.352315, 0.416063, 0.836618)
 bones/71/rotation = Quaternion(-0.273369, -0.153228, -0.0491889, 0.948352)
 bones/72/rotation = Quaternion(-0.24514, -0.0657151, -0.0854093, 0.96348)
-bones/73/rotation = Quaternion(0.272751, 0.451674, 0.843279, -0.102364)
-bones/74/rotation = Quaternion(-0.421822, 0.0100026, -0.0217593, 0.906362)
-bones/75/rotation = Quaternion(0.669888, -0.00376108, -0.0116371, 0.742361)
+bones/73/rotation = Quaternion(0.272817, 0.453522, 0.842006, -0.104472)
+bones/74/rotation = Quaternion(-0.425952, 0.0101018, -0.0217135, 0.904429)
+bones/75/rotation = Quaternion(0.671526, -0.00371685, -0.0118998, 0.740876)
 bones/76/rotation = Quaternion(0.197593, -0.00862964, -0.0217366, 0.980005)
-bones/77/rotation = Quaternion(0.00642153, 0.399916, 0.915735, 0.0381529)
-bones/78/rotation = Quaternion(-0.343562, -0.00812418, 0.0225282, 0.938824)
-bones/79/rotation = Quaternion(0.63389, 0.230567, -0.034863, 0.737433)
+bones/77/rotation = Quaternion(0.0067402, 0.401417, 0.91513, 0.036824)
+bones/78/rotation = Quaternion(-0.347277, -0.00821333, 0.0224959, 0.937457)
+bones/79/rotation = Quaternion(0.635387, 0.230682, -0.0344502, 0.736127)
 bones/80/rotation = Quaternion(0.197593, 0.00862955, 0.0217366, 0.980005)
 
 [node name="character" parent="EnemyMesh/Armature/Skeleton3D" index="0"]
@@ -294,6 +440,8 @@ emitting = false
 amount = 20
 lifetime = 0.5
 one_shot = true
+explosiveness = 0.2
+randomness = 0.2
 visibility_aabb = AABB(-0.285257, -0.474193, -0.268714, 0.570514, 0.948386, 0.537427)
 trail_lifetime = 0.49
 process_material = SubResource("ParticleProcessMaterial_hpcr4")
