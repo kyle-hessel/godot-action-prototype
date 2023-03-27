@@ -345,14 +345,13 @@ func handle_dead_state(delta: float) -> void:
 	
 	
 	if anim_progress > death_anim1_cutoff * 0.5 && is_on_floor():
-		# turn off ground collisions for sinking through floor.
-		set_collision_mask_value(1, false)
-		
 		# slow gravity further so that the enemy slowly sinks through the floor.
 		gravity_multiplier = gravity_multiplier_default * 0.002
 		
 	# once one shot death animation is about to finish, freeze anim tree time to hold the last frame.
 	if anim_progress > death_anim1_cutoff:
+		# turn off ground collisions for sinking through floor.
+		set_collision_mask_value(1, false)
 		anim_tree.set("parameters/TimeScale/scale", 0.0)
 		slide_away = false
 		
