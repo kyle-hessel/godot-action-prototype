@@ -354,12 +354,18 @@ func handle_dead_state(delta: float) -> void:
 	# once one shot death animation is about to finish, freeze anim tree time to hold the last frame.
 	if anim_progress > death_anim1_cutoff:
 		anim_tree.set("parameters/TimeScale/scale", 0.0)
+		slide_away = false
 		
 	# move hit particles down towards feet.
 	hit_particles.global_position = hit_particles.global_position.move_toward(global_position, 1.0 * delta)
 		
 	# just add gravity in case of dying in midair
 	handle_root_motion(delta, root_motion_multiplier * 1.5)
+	
+	if slide_away:
+		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
+		velocity += root_motion * root_motion_multiplier * 2.0
+	
 	apply_only_gravity(delta)
 	move_and_slide()
 		
@@ -443,6 +449,13 @@ func _on_relocate_timer_timeout():
 
 # despawn this enemy once dead.
 func _on_delete_timer_timeout():
+	# doing these bits here instead of in die because slide_away relies on player data, which these lines clear out.
+	$OverlapArea.set_collision_layer_value(3, false)
+	$OverlapArea.set_collision_mask_value(3, false)
+	
+	nearby_players.clear() # unsure if necessary
+	nearby_allies.clear() # unsure if necessary
+	
 	print("goobye!")
 	call_deferred("queue_free")
 
@@ -505,15 +518,11 @@ func die() -> void:
 	set_collision_layer_value(2, false)
 	set_collision_layer_value(3, false)
 	set_collision_mask_value(3, false)
-	$OverlapArea.set_collision_layer_value(3, false)
-	$OverlapArea.set_collision_mask_value(3, false)
 	
 	movement_state = EnemyMovementState.DEAD
 	velocity = Vector3.ZERO
-	slide_away = false
+	#slide_away = false
 	targeted_player = null # unsure if necessary
-	nearby_players.clear() # unsure if necessary
-	nearby_allies.clear() # unsure if necessary
 	path_cast.enabled = false
 	nearby_cast.enabled = false
 	combat_cast.enabled = false
