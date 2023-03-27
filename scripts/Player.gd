@@ -712,7 +712,7 @@ func _on_animation_tree_animation_finished(anim_name):
 			movement_state = PlayerMovementState.IDLE
 
 
-func _on_overlap_area_body_shape_entered(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int):
+func _on_overlap_area_body_entered(body: Node3D):
 	# if this is the first overlapping object, auto-target it (make this a setting later to decide if this is default behavior).
 	if overlapping_objects.is_empty():
 		overlapping_objects.push_back(body)
@@ -727,7 +727,7 @@ func _on_overlap_area_body_shape_entered(body_rid: RID, body: Node3D, body_shape
 	#print(overlapping_objects)
 
 
-func _on_overlap_area_body_shape_exited(body_rid: RID, body: Node3D, body_shape_index: int, local_shape_index: int):
+func _on_overlap_area_body_exited(body: Node3D):
 	# remove any body that leaves.
 	body.hit_received = false
 	overlapping_objects.erase(body)
@@ -743,17 +743,6 @@ func _on_overlap_area_body_shape_exited(body_rid: RID, body: Node3D, body_shape_
 		targeted_object = overlapping_objects[0]
 		
 	#print(overlapping_objects)
-
-
-func _on_overlap_area_area_shape_entered(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
-	#print(area.get_parent_node_3d())
-	#overlapping_object = area.get_parent_node_3d()
-	pass
-
-
-func _on_overlap_area_area_shape_exited(area_rid: RID, area: Area3D, area_shape_index: int, local_shape_index: int) -> void:
-	#overlapping_object = null
-	pass
 
 
 func _on_vanish_timer_timeout() -> void:
