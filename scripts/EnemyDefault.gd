@@ -160,7 +160,6 @@ func _physics_process(delta: float) -> void:
 				velocity = Vector3(0.0, velocity.y, 0.0)
 			
 			move_and_slide()
-		
 
 
 func apply_only_gravity(delta: float) -> void:

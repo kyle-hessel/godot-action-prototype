@@ -6,6 +6,7 @@ class_name Player
 @export var player_health_current: float = player_health_max
 @export var player_base_damage_stat: float = 3.0
 @export var player_damage_stat: float = player_base_damage_stat
+@export var ground_combo_damage_multiplier: float = 1.5
 
 var player_speed_current: float = 0.0
 @export var player_speed_walk_max: float = 5.0
@@ -786,8 +787,14 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 					# mark that the body has received a hit from this attack anim so that it doesn't receive extra.
 					# do this per-object so that attacks can hit multiple enemies at once.
 					body.hit_received = true
+					
+					var damage_result: String
 					# inflict damage on the enemy, let them handle the details.
-					var damage_result: String = body.take_damage(player_damage_stat, attack_combo_stage)
+					if current_oneshot_anim == "AttackGroundShot3":
+						#inflict extra damage at end of combo.
+						damage_result = body.take_damage(player_damage_stat * ground_combo_damage_multiplier, attack_combo_stage)
+					else:
+						damage_result = body.take_damage(player_damage_stat, attack_combo_stage)
 					
 					# if enemy dies from this hit, drop targeting and remove them from overlapping objects.
 					# can add EXP gain, etc here later
