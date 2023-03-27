@@ -21,6 +21,7 @@ var current_oneshot_anim: String
 @export var attack_anim_damage_cutoff: float = 0.25
 @export var takedamage1_rootmotion_cutoff: float = 0.15
 @export var takedamage2_rootmotion_cutoff: float = 0.485
+@export var death_anim1_cutoff: float = 0.965
 var hit_received: bool = false
 var slide_away: bool = false
 var delta_cache: float
@@ -45,7 +46,8 @@ var targeted_player: Node3D = null
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-@export var gravity_multiplier: float = 1.0
+@export var gravity_multiplier_default: float = 1.0
+var gravity_multiplier: float = gravity_multiplier_default
 
 enum EnemyMovementState {
 	IDLE = 0,
@@ -80,6 +82,12 @@ func _ready() -> void:
 	combat_cast.add_exception($".") #'Exclude Parent' doesn't seem to work since combat_cast isn't a direct child of EnemyStarfiend, but instead its mesh.
 	nearby_cast.add_exception($".")
 	path_cast.add_exception($".")
+
+
+# clear materials just as node is deleted to avoid debugger errors. see: https://github.com/godotengine/godot/issues/67144
+func _exit_tree():
+	enemy_mesh.set("surface_material_override/0", null)
+	enemy_mesh.set("surface_material_override/1", null)
 
 
 func _physics_process(delta: float) -> void:
@@ -323,16 +331,43 @@ func handle_dead_state(delta: float) -> void:
 		void_amount += void_increment * delta
 	else:
 		void_amount = void_amount_max
-		
+			
+		if $DeleteTimer.is_stopped():
+			$DeleteTimer.start()
+			
 	if void_amount > void_amount_max * 0.25 && void_amount < void_amount_max - 0.1:
 		hit_particles.emitting = true
 	
 	enemy_mesh.get_surface_override_material(1).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
 	enemy_mesh.get_surface_override_material(0).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
+		
+	var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+	var anim_progress: float = anim_tree.get(attack_anim_string)
 	
+	
+	if anim_progress > death_anim1_cutoff * 0.5 && is_on_floor():
+		# turn off ground collisions for sinking through floor.
+		set_collision_mask_value(1, false)
+		
+		# slow gravity further so that the enemy slowly sinks through the floor.
+		gravity_multiplier = gravity_multiplier_default * 0.0025
+		
+	# once one shot death animation is about to finish, freeze anim tree time to hold the last frame.
+	if anim_progress > death_anim1_cutoff:
+		anim_tree.set("parameters/TimeScale/scale", 0.0)
+		
+	# move hit particles down towards feet.
+	hit_particles.global_position = hit_particles.global_position.move_toward(global_position, 1.0 * delta)
+		
 	# just add gravity in case of dying in midair
+	handle_root_motion(delta, root_motion_multiplier * 1.5)
 	apply_only_gravity(delta)
 	move_and_slide()
+		
+	if is_on_floor():
+		velocity = Vector3.ZERO
+	else:
+		velocity = Vector3(0.0, velocity.y, 0.0)
 
 
 func rotate_enemy_tracking(delta: float) -> void:
@@ -407,6 +442,12 @@ func _on_relocate_timer_timeout():
 			nav_agent.set_target_position(relocate_pos)
 
 
+# despawn this enemy once dead.
+func _on_delete_timer_timeout():
+	print("goobye!")
+	call_deferred("queue_free")
+
+
 # finds a randomized position in a given circumference around a target. does not check if said position is valid on terrain.
 func find_random_pos_around_target(radius: float = 7.0, target_pos: Vector3 = targeted_player.global_position) -> Vector3:
 	rng.randomize()
@@ -461,7 +502,7 @@ func take_damage(amount: float, player_combo_stage: int) -> String:
 
 
 func die() -> void:
-	# disable most collisions so that the enemy can't pick up the player and vice versa.
+	# disable most collisions so that the enemy can't detect the player and vice versa.
 	set_collision_layer_value(2, false)
 	set_collision_layer_value(3, false)
 	set_collision_mask_value(3, false)
@@ -470,12 +511,19 @@ func die() -> void:
 	
 	movement_state = EnemyMovementState.DEAD
 	velocity = Vector3.ZERO
+	slide_away = false
+	targeted_player = null # unsure if necessary
+	nearby_players.clear() # unsure if necessary
+	nearby_allies.clear() # unsure if necessary
 	path_cast.enabled = false
 	nearby_cast.enabled = false
 	combat_cast.enabled = false
-	gravity_multiplier *= 0.5
+	gravity_multiplier *= 0.25
 	hit_particles.amount = 50
 	print("enemy ded!")
+	
+	anim_tree.set("parameters/DieShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	current_oneshot_anim = "DieShot1"
 
 
 func _on_animation_tree_animation_finished(anim_name):
@@ -594,3 +642,4 @@ func find_relative_direction(from: Vector3, to: Vector3) -> String:
 		return "front"
 	else:
 		return "?"
+

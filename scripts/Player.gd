@@ -790,6 +790,7 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 					var damage_result: String = body.take_damage(player_damage_stat, attack_combo_stage)
 					
 					# if enemy dies from this hit, drop targeting and remove them from overlapping objects.
+					# can add EXP gain, etc here later
 					if damage_result == "dead":
 						targeted_object = null
 						targeting = false
