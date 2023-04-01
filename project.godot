@@ -29,6 +29,10 @@ window/stdout/print_fps=true
 window/physics_jitter_fix=0.5
 window/run_on_separate_thread=true
 
+[editor]
+
+movie_writer/movie_file="D:/Projects/Gamedev/_exports/movie_writer/starwielders_gameplay.png"
+
 [importer_defaults]
 
 texture={
