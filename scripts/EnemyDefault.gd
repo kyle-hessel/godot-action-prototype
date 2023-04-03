@@ -263,6 +263,7 @@ func handle_guard_state(delta: float) -> void:
 	
 	# slide away from the player using their velocity when the player is attacking.
 	if slide_away:
+		print("slide")
 		# this line could break later with multiplayer
 		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
 		velocity += root_motion * root_motion_multiplier * 2.5
@@ -276,10 +277,9 @@ func handle_guard_state(delta: float) -> void:
 	move_and_slide()
 	
 	# reset velocity at the end since we're using root motion.
-	if is_on_floor():
+	# just don't worry about gravity problems for now
+	if slide_away:
 		velocity = Vector3.ZERO
-	else:
-		velocity = Vector3(0.0, velocity.y, 0.0)
 
 
 func handle_damaged_state(delta: float) -> void:
@@ -314,6 +314,7 @@ func handle_damaged_state(delta: float) -> void:
 			
 	# additionally, keep adding some of the player's root motion.
 	if slide_away:
+		print("slide")
 		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
 		velocity += root_motion * root_motion_multiplier * 2.5
 		

@@ -33,6 +33,8 @@ var jumps_remaining: int = max_jumps
 var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
+var air_combo_complete: bool = false
+var attack_type: String = "none"
 var current_oneshot_anim: String
 var attack_anim_damage_cutoff: float = 0.25
 var hit_received: bool = false
@@ -126,7 +128,12 @@ func _physics_process(delta: float) -> void:
 	
 	# if attacking or damaged, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
 	if movement_state == PlayerMovementState.ATTACK || movement_state == PlayerMovementState.DAMAGED:
-		velocity = Vector3(0, velocity.y, 0)
+		if attack_type == "ground":
+			velocity = Vector3(0, velocity.y, 0)
+		elif attack_type == "air":
+			velocity = Vector3.ZERO
+		elif attack_type == "none":
+			velocity = Vector3.ZERO
 	
 	#print(player_speed_current)
 	#print(velocity.length())
@@ -167,12 +174,14 @@ func rotate_player_movement(delta: float) -> void:
 
 
 func rotate_player_combat(delta: float) -> void:
-	face_object_lerp($starblade_wielder, targeted_object.global_position, Vector3.UP, delta)
-	# zero out X and Z rotations so that the player can't rotate in odd ways and get stuck there.
-	$starblade_wielder.rotation.x = 0.0;
-	$starblade_wielder.rotation.z = 0.0;
-	# maybe not necessary, but recommended - see https://docs.godotengine.org/en/stable/tutorials/3d/using_transforms.html
-	$starblade_wielder.global_transform = $starblade_wielder.global_transform.orthonormalized()
+	# only target if both target and player are in the air or on the ground together.
+	if is_on_floor() && targeted_object.is_on_floor() || !is_on_floor() && !targeted_object.is_on_floor():
+		face_object_lerp($starblade_wielder, targeted_object.global_position, Vector3.UP, delta)
+		# zero out X and Z rotations so that the player can't rotate in odd ways and get stuck there.
+		$starblade_wielder.rotation.x = 0.0;
+		$starblade_wielder.rotation.z = 0.0;
+		# maybe not necessary, but recommended - see https://docs.godotengine.org/en/stable/tutorials/3d/using_transforms.html
+		$starblade_wielder.global_transform = $starblade_wielder.global_transform.orthonormalized()
 
 
 func apply_jump_and_gravity(delta: float) -> void:
@@ -187,6 +196,7 @@ func apply_jump_and_gravity(delta: float) -> void:
 	# hitting the ground
 	else:
 		if is_jumping:
+			air_combo_complete = false
 			is_jumping = false
 			jumps_remaining = max_jumps
 
@@ -239,7 +249,10 @@ func determine_player_movement_state(delta: float) -> void:
 	else:
 		# if attacking, calculate movement w/ root motion
 		if movement_state == PlayerMovementState.ATTACK:
-			handle_root_motion(delta)
+			if attack_type == "ground":
+				handle_root_motion(delta)
+			elif attack_type == "air":
+				handle_root_motion(delta, root_motion_multiplier * 0.5)
 			
 		# if taking damage, reset attack combo, calculate movement w/ root motion
 		elif movement_state == PlayerMovementState.DAMAGED:
@@ -613,6 +626,7 @@ func handle_weapon_actions(event) -> void:
 					
 					anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 					current_oneshot_anim = "AttackGroundShot1"
+					attack_type = "ground"
 					current_weapon.visible = true
 					sword_trail.trail_enabled = true
 					weapon_hitbox.monitoring = true
@@ -625,34 +639,47 @@ func handle_weapon_actions(event) -> void:
 						1:
 							var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
 							if anim_duration >= 0.2 && anim_duration <= 0.7:
+								attack_type = "ground"
 								continue_attack_chain = true
 								vanish_timer.start(vanish_timer_duration)
 						2:
 							var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
 							if anim_duration > 0.25 && anim_duration < 0.85:
+								attack_type = "ground"
 								continue_attack_chain = true
 								vanish_timer.start(vanish_timer_duration)
 			# midair attacks
 			else:
-				if movement_state != PlayerMovementState.ATTACK:
-	#				movement_state = PlayerMovementState.ATTACK
-	#				player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+				if !air_combo_complete:
+					if movement_state != PlayerMovementState.ATTACK:
+						movement_state = PlayerMovementState.ATTACK
+						player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
 
-	#				anim_tree.set("parameters/AttackMidairShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-	#				current_weapon.visible = true
-	#				sword_trail.trail_enabled = true
-	#				weapon_hitbox.monitoring = true
-					# swap to holding weapon animations
-	#				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
-	#				attack_combo_stage += 1
-					pass
-				# if already attacking, determine if the attack combo is continued.
-				else:
-					match attack_combo_stage:
-						1:
-							pass
-						2:
-							pass
+						anim_tree.set("parameters/AttackAirShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+						current_oneshot_anim = "AttackAirShot1"
+						attack_type = "air"
+						current_weapon.visible = true
+						sword_trail.trail_enabled = true
+						weapon_hitbox.monitoring = true
+						# swap to holding weapon animations
+						weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+						attack_combo_stage += 1
+						pass
+					# if already attacking, determine if the attack combo is continued.
+					else:
+						match attack_combo_stage:
+							1:
+								var anim_duration: float = anim_tree.get("parameters/AttackAirShot1/time")
+								if anim_duration >= 0.1 && anim_duration <= 0.9:
+									attack_type = "air"
+									continue_attack_chain = true
+									vanish_timer.start(vanish_timer_duration)
+							2:
+								var anim_duration: float = anim_tree.get("parameters/AttackAirShot2/time")
+								if anim_duration >= 0.1 && anim_duration <= 0.9:
+									attack_type = "air"
+									continue_attack_chain = true
+									vanish_timer.start(vanish_timer_duration)
 	
 
 # organize array of overlapping objects by distance, closest to farthest.
@@ -694,11 +721,23 @@ func _on_animation_tree_animation_finished(anim_name):
 				attack_combo_stage += 1
 				anim_tree.set("parameters/AttackGroundShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 				current_oneshot_anim = "AttackGroundShot3"
+				
+			elif anim_name == "extra_anims/AttackComboAir1":
+				attack_combo_stage += 1
+				anim_tree.set("parameters/AttackAirShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				current_oneshot_anim = "AttackAirShot2"
+				
+			elif anim_name == "extra_anims/AttackComboAir2":
+				attack_combo_stage += 1
+				anim_tree.set("parameters/AttackAirShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				current_oneshot_anim = "AttackAirShot3"
+				air_combo_complete = true
 			
 		# if combo is ending, reset player state.
 		else:
 			movement_state = PlayerMovementState.IDLE
 			attack_combo_stage = 0
+			attack_type = "none"
 			# start timer again so that there is a buffer between when combat ends and when weapon vanishes
 			vanish_timer.start(vanish_timer_duration)
 			weapon_hitbox.monitoring = false
@@ -779,7 +818,7 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 					
 					var damage_result: String
 					# inflict damage on the enemy, let them handle the details.
-					if current_oneshot_anim == "AttackGroundShot3":
+					if current_oneshot_anim == "AttackGroundShot3" || current_oneshot_anim == "AttackAirShot3":
 						#inflict extra damage at end of combo.
 						damage_result = body.take_damage(player_damage_stat * ground_combo_damage_multiplier, attack_combo_stage)
 					else:
