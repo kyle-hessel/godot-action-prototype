@@ -255,7 +255,8 @@ func handle_guard_state(delta: float) -> void:
 		# an eight_directional version of find_relative_direction *might* be preferable here later.
 		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
 		#print(player_dir)
-		if player.movement_state == player.PlayerMovementState.ATTACK && player_dir == "front":
+		# currently only enable slide_away if the player is grounded. will revisit later; this should depend on if the enemy is already in midair or if they are an aerial enemy.
+		if player.movement_state == player.PlayerMovementState.ATTACK && player_dir == "front" && player.is_on_floor():
 			slide_away = true
 		else:
 			# I think this is fine, may help with edge cases
