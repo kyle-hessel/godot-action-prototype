@@ -263,7 +263,7 @@ func handle_guard_state(delta: float) -> void:
 	
 	# slide away from the player using their velocity when the player is attacking.
 	if slide_away:
-		print("slide")
+		#print("slide")
 		# this line could break later with multiplayer
 		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
 		velocity += root_motion * root_motion_multiplier * 2.5
@@ -311,7 +311,13 @@ func handle_damaged_state(delta: float) -> void:
 		else:
 			# enemy's own root motion
 			handle_root_motion(delta, root_motion_multiplier * 0.9)
-			
+	
+	if nearby_cast.is_colliding():
+		var player: CharacterBody3D = nearby_cast.get_collider()
+		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
+		if player_dir != "front":
+			slide_away = false
+	
 	# additionally, keep adding some of the player's root motion.
 	if slide_away:
 		print("slide")
@@ -361,6 +367,12 @@ func handle_dead_state(delta: float) -> void:
 		
 	# just add gravity in case of dying in midair
 	handle_root_motion(delta, root_motion_multiplier * 1.5)
+	
+	if nearby_cast.is_colliding():
+		var player: CharacterBody3D = nearby_cast.get_collider()
+		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
+		if player_dir != "front":
+			slide_away = false
 	
 	if slide_away:
 		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
@@ -651,3 +663,28 @@ func find_relative_direction(from: Vector3, to: Vector3) -> String:
 	else:
 		return "?"
 
+# this is probably mislabeled somewhat lol
+func find_relative_direction_eightway(from: Vector3, to: Vector3) -> String:
+	var angle_diff: float = rad_to_deg(from.signed_angle_to(to, Vector3.UP))
+	
+	if angle_diff < 45.0 && angle_diff >= 0.0:
+		return "back-left"
+	elif angle_diff < 0.0 && angle_diff >= -45.0:
+		return "back-right"
+	elif angle_diff < -45.0 && angle_diff >= -90.0:
+		return "left-left"
+	elif angle_diff < -90.0 && angle_diff >= -135.0:
+		return "left-right"
+	elif angle_diff < 135.0 && angle_diff >= 90.0:
+		return "right-left"
+	elif angle_diff < 90.0 && angle_diff >= 45.0:
+		return "right-right"
+	elif angle_diff >= 135.0 && angle_diff <= 180.0:
+		return "front-left"
+	elif angle_diff < -135.0 && angle_diff >= -180.0:
+		return "front-right"
+	else:
+		return "?"
+	
+	
+	
