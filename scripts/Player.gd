@@ -735,6 +735,7 @@ func _on_animation_tree_animation_finished(anim_name):
 			
 		# if combo is ending, reset player state.
 		else:
+			air_combo_complete = true
 			movement_state = PlayerMovementState.IDLE
 			attack_combo_stage = 0
 			attack_type = "none"
@@ -819,7 +820,7 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 					var damage_result: String
 					# inflict damage on the enemy, let them handle the details.
 					if current_oneshot_anim == "AttackGroundShot3" || current_oneshot_anim == "AttackAirShot3":
-						#inflict extra damage at end of combo.
+						#inflict extra damage at end of combos.
 						damage_result = body.take_damage(player_damage_stat * ground_combo_damage_multiplier, attack_combo_stage)
 					else:
 						damage_result = body.take_damage(player_damage_stat, attack_combo_stage)
