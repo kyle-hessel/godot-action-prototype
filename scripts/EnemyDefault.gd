@@ -396,10 +396,11 @@ func _on_navigation_agent_3d_target_reached():
 
 # final velocity when in track mode.
 func _on_navigation_agent_3d_velocity_computed(safe_velocity):
-	# smoother velocity with move_toward, helps with corners, etc
-	velocity = velocity.move_toward(safe_velocity, enemy_decel_rate)
-	apply_only_gravity(delta_cache)
-	move_and_slide()
+	if is_on_floor():
+		# smoother velocity with move_toward, helps with corners, etc
+		velocity = velocity.move_toward(safe_velocity, enemy_decel_rate)
+		apply_only_gravity(delta_cache)
+		move_and_slide()
 
 
 func _on_guard_timer_timeout():

@@ -8,7 +8,6 @@ func _ready() -> void:
 	randomize()
 	# relocate this somewhere else later, not in level script. Preferably in a singleton or something.
 	Engine.max_fps = physics_tick # maybe don't let this go above physics_tick
-	get_world_3d().get_navigation_map()
 	
 	match physics_tick:
 		30:
