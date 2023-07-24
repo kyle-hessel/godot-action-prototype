@@ -1,9 +1,9 @@
 [gd_resource type="VisualShader" load_steps=44 format=3 uid="uid://jt23cahyvxnv"]
 
-[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/BlendModes/additive_blend.gd" id="1_axb1p"]
-[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/UV/UVTiler.gd" id="1_ldrv7"]
-[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/ColorAdjustment/HSVAdjustment.gd" id="2_pgenn"]
-[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/UV/UVRotate.gd" id="2_txtdr"]
+[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/BlendModes/additive_blend.gd" id="1_ttdjg"]
+[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/UV/UVRotate.gd" id="2_1jf50"]
+[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/UV/UVTiler.gd" id="3_wbbsf"]
+[ext_resource type="Script" path="res://addons/VisualShaderExtras-4.0/ColorAdjustment/HSVAdjustment.gd" id="4_x0jhm"]
 
 [sub_resource type="VisualShaderNodeInput" id="VisualShaderNodeInput_a20sd"]
 input_name = "time"
@@ -97,7 +97,7 @@ op_type = 5
 [sub_resource type="VisualShaderNodeCustom" id="VisualShaderNodeCustom_bdvpq"]
 default_input_values = [2, 0.5]
 initialized = true
-script = ExtResource("1_axb1p")
+script = ExtResource("1_ttdjg")
 
 [sub_resource type="VisualShaderNodeColorParameter" id="VisualShaderNodeColorParameter_chhf3"]
 parameter_name = "BackgroundColor"
@@ -118,7 +118,7 @@ operator = 2
 [sub_resource type="VisualShaderNodeCustom" id="VisualShaderNodeCustom_cklli"]
 default_input_values = [1, Vector2(0.5, 0.5), 2, 10.0, 3, Vector2(0, 0)]
 initialized = true
-script = ExtResource("2_txtdr")
+script = ExtResource("2_1jf50")
 
 [sub_resource type="VisualShaderNodeFloatFunc" id="VisualShaderNodeFloatFunc_hu8bv"]
 default_input_values = [0, 45.0]
@@ -144,7 +144,7 @@ default_value = Vector2(1, 1)
 output_port_for_preview = 0
 default_input_values = [0, Vector2(1, 1), 1, 1.0, 2, 0.0]
 initialized = true
-script = ExtResource("1_ldrv7")
+script = ExtResource("3_wbbsf")
 
 [sub_resource type="VisualShaderNodeFloatParameter" id="VisualShaderNodeFloatParameter_wohff"]
 parameter_name = "NoiseRotSpeed"
@@ -159,7 +159,7 @@ default_value = 0.75
 [sub_resource type="VisualShaderNodeCustom" id="VisualShaderNodeCustom_vbaqj"]
 default_input_values = [1, 0.0, 2, 0.0, 3, 0.0]
 initialized = true
-script = ExtResource("2_pgenn")
+script = ExtResource("4_x0jhm")
 
 [resource]
 code = "shader_type spatial;

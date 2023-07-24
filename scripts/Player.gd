@@ -2,7 +2,7 @@ extends CharacterBody3D
 
 class_name Player
 
-@export var player_health_max: float = 50.0
+@export var player_health_max: float = 20.0
 @export var player_health_current: float = player_health_max
 @export var player_base_damage_stat: float = 3.0
 @export var player_damage_stat: float = player_base_damage_stat
@@ -36,7 +36,8 @@ var continue_attack_chain: bool = false
 var air_combo_complete: bool = false
 var attack_type: String = "none"
 var current_oneshot_anim: String
-var attack_anim_damage_cutoff: float = 0.25
+@export var attack_anim_damage_cutoff: float = 0.25
+@export var death_front_cutoff: float = 0.75
 var hit_received: bool = false
 var targeting: bool = false
 var tracking: bool = false
@@ -239,24 +240,29 @@ func apply_only_gravity(delta: float) -> void:
 
 
 func determine_player_movement_state(delta: float) -> void:
-	# if not attacking or taking damage, move normally
-	if movement_state != PlayerMovementState.ATTACK && movement_state != PlayerMovementState.DAMAGED:
-		# gravity, then jumping, in that order
-		apply_jump_and_gravity(delta)
-		# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
-		calculate_player_lateral_movement(delta)
-		
-	else:
-		# if attacking, calculate movement w/ root motion
-		if movement_state == PlayerMovementState.ATTACK:
-			if attack_type == "ground":
-				handle_root_motion(delta)
-			elif attack_type == "air":
-				handle_root_motion(delta, root_motion_multiplier * 0.5)
+	# only try to do anything if alive.
+	if movement_state != PlayerMovementState.DEAD:
+		# if not attacking or taking damage, move normally
+		if movement_state != PlayerMovementState.ATTACK && movement_state != PlayerMovementState.DAMAGED:
+			# gravity, then jumping, in that order
+			apply_jump_and_gravity(delta)
+			# Lateral movement - gets direction vector from inputs, calls funcs to determine speed (or lack thereof) and applies movement.
+			calculate_player_lateral_movement(delta)
 			
-		# if taking damage, reset attack combo, calculate movement w/ root motion
-		elif movement_state == PlayerMovementState.DAMAGED:
-			handle_root_motion(delta, root_motion_multiplier * 0.5)
+		else:
+			# if attacking, calculate movement w/ root motion
+			if movement_state == PlayerMovementState.ATTACK:
+				if attack_type == "ground":
+					handle_root_motion(delta)
+				elif attack_type == "air":
+					handle_root_motion(delta, root_motion_multiplier * 0.5)
+				
+			# if taking damage, reset attack combo, calculate movement w/ root motion
+			elif movement_state == PlayerMovementState.DAMAGED:
+				handle_root_motion(delta, root_motion_multiplier * 0.5)
+	# if dead, handle that.
+	else:
+		handle_death(delta)
 
 
 func calculate_player_lateral_movement(delta: float) -> void:
@@ -680,7 +686,20 @@ func handle_weapon_actions(event) -> void:
 									attack_type = "air"
 									continue_attack_chain = true
 									vanish_timer.start(vanish_timer_duration)
-	
+
+
+func handle_death(delta: float) -> void:
+	var death_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+
+	var anim_progress: float = anim_tree.get(death_anim_string)
+
+	# once one shot death animation is about to finish, freeze anim tree time to hold the last frame.
+	if anim_progress > death_front_cutoff:
+		anim_tree.set("parameters/TimeScale/scale", 0.0)
+
+	apply_only_gravity(delta)
+	move_and_slide()
+
 
 # organize array of overlapping objects by distance, closest to farthest.
 func sort_objects_by_distance() -> void:
@@ -835,7 +854,7 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 						overlapping_objects.erase(body)
 
 
-func take_damage(amount: float, enemy_forward_vector: Vector3) -> void:
+func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
 	# take damage.
 	player_health_current -= amount
 	player_health_current = clamp(player_health_current, 0.0, player_health_max)
@@ -845,12 +864,17 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> void:
 	if movement_state == PlayerMovementState.ATTACK:
 		var player_attack_anim: String = "parameters/" + current_oneshot_anim + "/request"
 		anim_tree.set(player_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
-		
-	# switch player state to damaged, reset some other stuff.
-	movement_state = PlayerMovementState.DAMAGED
+	
 	weapon_hitbox.monitoring = false
 	player_speed_current = 0
 	attack_combo_stage = 0
+	
+	# if player is dead, early out of this function and instead call die after damage is dealt.
+	if player_health_current == 0.0:
+		die()
+		return "dead"
+	
+	movement_state = PlayerMovementState.DAMAGED
 	
 	# determine the direction the player was hit from.
 	var player_forward_vector: Vector3 = $starblade_wielder.transform.basis.z * -1.0
@@ -878,6 +902,30 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> void:
 	
 	# start player's i-frames.
 	i_frames.start()
+	
+	return "alive"
+
+
+func die() -> void:
+	# disable most collisions so that the enemy can't detect the player and vice versa.
+	set_collision_layer_value(3, false)
+	set_collision_mask_value(3, false)
+	
+	movement_state = PlayerMovementState.DEAD
+	player_speed_current = 0.0
+	attack_combo_stage = 0
+	velocity = Vector3.ZERO
+	$OverlapArea.monitoring = false
+	weapon_hitbox.monitoring = false
+	current_weapon.visible = false
+	targeting = false
+	targeted_object = null
+	overlapping_objects.clear()
+	
+	print("player ded!")
+	
+	anim_tree.set("parameters/DeathFrontShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	current_oneshot_anim = "DeathFrontShot"
 
 
 ### HELPER FUNCTIONS

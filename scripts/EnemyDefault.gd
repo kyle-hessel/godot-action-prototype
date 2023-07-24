@@ -216,7 +216,15 @@ func handle_attack_state(delta: float) -> void:
 						col["collider"].hit_received = true
 						
 						# inflict damage on the player, let them handle the details.
-						col["collider"].take_damage(enemy_normal_damage_stat, $EnemyMesh.transform.basis.z * -1.0)
+						var damage_result: String = col["collider"].take_damage(enemy_normal_damage_stat, $EnemyMesh.transform.basis.z * -1.0)
+						
+						if damage_result == "dead":
+							nearby_players.erase(col["collider"])
+							if !nearby_players.is_empty():
+								targeted_player = nearby_players[0]
+							else:
+								targeted_player = null
+							
 
 
 func handle_guard_state(delta: float) -> void:
@@ -351,6 +359,7 @@ func handle_dead_state(delta: float) -> void:
 		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
 		velocity += root_motion * root_motion_multiplier * 2.0
 	
+	# all below could prolly be optimized
 	apply_only_gravity(delta)
 	move_and_slide()
 		
@@ -363,8 +372,8 @@ func handle_dead_state(delta: float) -> void:
 func rotate_enemy_tracking(delta: float) -> void:
 	face_object_lerp($EnemyMesh, targeted_player.position, Vector3.UP, delta)
 	# zero out X and Z rotations so that the enemy can't rotate in odd ways.
-	$EnemyMesh.rotation.x = 0.0;
-	$EnemyMesh.rotation.z = 0.0;
+	$EnemyMesh.rotation.x = 0.0
+	$EnemyMesh.rotation.z = 0.0
 
 
 # determine how to move when applying root motion.
@@ -496,12 +505,15 @@ func die() -> void:
 func _on_animation_tree_animation_finished(anim_name):
 	# if finishing attack animation, resume TRACK state.
 	if movement_state == EnemyMovementState.ATTACK:
-		# reset hit reg for each nearby player at the end of each attack anim.
+		# reset hit reg for each nearby player at the end of each attack anim. if empty, I believe nothing will happen rather than a crash.
 		for player in nearby_players:
 			player.hit_received = false
 		
 		if anim_name == "EnemyAttack1":
-			movement_state = EnemyMovementState.TRACK
+			if nearby_players.is_empty():
+				movement_state = EnemyMovementState.IDLE
+			else:
+				movement_state = EnemyMovementState.TRACK
 			combat_cast.enabled = false
 	
 	# if ending taking damage, resume track or guard state if we have a player still, and idle if not.

@@ -8,6 +8,7 @@ func _ready() -> void:
 	randomize()
 	# relocate this somewhere else later, not in level script. Preferably in a singleton or something.
 	Engine.max_fps = physics_tick # maybe don't let this go above physics_tick
+	OS.delta_smoothing = true # need to do some comparisons with this on/off
 	
 	match physics_tick:
 		30:
