@@ -301,7 +301,7 @@ func handle_damaged_state(delta: float) -> void:
 	
 	# additionally, keep adding some of the player's root motion.
 	if slide_away:
-		print("slide")
+		#print("slide")
 		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
 		velocity += root_motion * root_motion_multiplier * 2.5
 		

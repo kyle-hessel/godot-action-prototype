@@ -77,6 +77,8 @@ var weapon_actions = {
 	"action4": "ultimate",
 }
 
+var current_weapon_action: String = "none"
+
 enum PlayerMovementState {
 	IDLE = 0,
 	WALK = 1,
@@ -132,6 +134,10 @@ func _physics_process(delta: float) -> void:
 	# processes complex collisions: see https://godotengine.org/qa/44624/kinematicbody3d-move_and_slide-move_and_collide-different
 	move_and_slide()
 	
+	#print(current_weapon_action)
+	print(continue_attack_chain)
+	#print(air_combo_complete)
+	
 	# for visual debug
 	$SpringArmVisualizer.position = $SpringArm3D.position
 	
@@ -156,7 +162,7 @@ func _input(event):
 	
 	# handle what happens when the player presses different weapon actions in combat.
 	# using 'event.' instead of 'Input.' for better input event buffering.
-	determine_weapon_action_handles(event)
+	interpret_weapon_action_handles(event)
 
 
 # determine if player rotates relative to the camera or relative to an enemy or object.
@@ -204,8 +210,9 @@ func apply_jump_and_gravity(delta: float) -> void:
 		
 	# hitting the ground
 	else:
+		air_combo_complete = false
+		
 		if is_jumping:
-			air_combo_complete = false
 			is_jumping = false
 			jumps_remaining = max_jumps
 
@@ -268,6 +275,7 @@ func determine_player_movement_state(delta: float) -> void:
 			# if taking damage, reset attack combo, calculate movement w/ root motion
 			elif movement_state == PlayerMovementState.DAMAGED:
 				handle_root_motion(delta, root_motion_multiplier * 0.5)
+	
 	# if dead, handle that.
 	else:
 		handle_death(delta)
@@ -308,7 +316,7 @@ func calculate_player_lateral_movement(delta: float) -> void:
 	
 	# if there's no input, determine how/if we decelerate.
 	else:
-		#if (is_jumping == false):
+		#if (is_jumping == false): # this has significant effect on lateral deceleration while in midair.
 		stop_player_movement(delta)
 
 
@@ -626,9 +634,11 @@ func rotate_cam_joypad(delta: float) -> void:
 	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_up_joystick") * -joystick_sensitivity * delta
 	$SpringArm3D.rotation.x -= Input.get_action_strength("camera_down_joystick") * joystick_sensitivity * delta
 	$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3)
-	
 
-func determine_weapon_action_handles(event) -> void:
+
+# translates button presses to appropriate assigned weapon actions using value fetching from the weapon_actions dictionary,
+# and sends this off to handle_weapon_action to begin executing the appropriate action.
+func interpret_weapon_action_handles(event) -> void:
 	if movement_state != PlayerMovementState.DAMAGED && movement_state != PlayerMovementState.DEAD:
 		# determine which weapon action to execute based on player assignments
 		if event.is_action_pressed("weaponaction1"):
@@ -644,16 +654,28 @@ func determine_weapon_action_handles(event) -> void:
 			handle_weapon_action(weapon_actions["action4"])
 
 
+# funnel inputted weapon action into the appropriate function call.
+# code is a little redundant here, but needs to be due to special cases,
+# such as chained attack combos in the 'attack' weapon action (default attacks).
 func handle_weapon_action(command: String) -> void:
 	match command:
 		"attack":
-			weapon_action_attack()
+			if current_weapon_action == "none" || current_weapon_action == "attack":
+				if !air_combo_complete:
+					weapon_action_attack()
+					current_weapon_action = command
 		"parry":
-			weapon_action_parry()
+			if current_weapon_action == "none":
+				weapon_action_parry()
+				#current_weapon_action = command
 		"swing":
-			weapon_action_swing()
+			if current_weapon_action == "none":
+				weapon_action_swing()
+				#current_weapon_action = command
 		"ultimate":
-			weapon_action_ultimate()
+			if current_weapon_action == "none":
+				weapon_action_ultimate()
+				#current_weapon_action = command
 		_:
 			print("Not a valid weapon action.")
 
@@ -671,7 +693,7 @@ func weapon_action_attack() -> void:
 			attack_type = "ground"
 			current_weapon.visible = true
 			sword_trail.trail_enabled = true
-			weapon_hitbox.monitoring = true
+			weapon_hitbox.monitoring = true # enable hit detection on player's current_weapon.
 			# swap to holding weapon animations
 			weapon_blend = 1 # no blend needed since we launch straight into an attack anim
 			attack_combo_stage += 1
@@ -692,35 +714,38 @@ func weapon_action_attack() -> void:
 						vanish_timer.start(vanish_timer_duration)
 	# midair attacks
 	else:
-		if !air_combo_complete:
-			if movement_state != PlayerMovementState.ATTACK:
-				movement_state = PlayerMovementState.ATTACK
-				player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
-				
-				anim_tree.set("parameters/AttackAirShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_oneshot_anim = "AttackAirShot1"
-				attack_type = "air"
-				current_weapon.visible = true
-				sword_trail.trail_enabled = true
-				weapon_hitbox.monitoring = true
-				# swap to holding weapon animations
-				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
-				attack_combo_stage += 1
-			# if already attacking, determine if the attack combo is continued.
-			else:
-				match attack_combo_stage:
-					1:
-						var anim_duration: float = anim_tree.get("parameters/AttackAirShot1/time")
-						if anim_duration >= 0.1 && anim_duration <= 0.9:
-							attack_type = "air"
-							continue_attack_chain = true
-							vanish_timer.start(vanish_timer_duration)
-					2:
-						var anim_duration: float = anim_tree.get("parameters/AttackAirShot2/time")
-						if anim_duration >= 0.1 && anim_duration <= 0.9:
-							attack_type = "air"
-							continue_attack_chain = true
-							vanish_timer.start(vanish_timer_duration)
+		if movement_state != PlayerMovementState.ATTACK:
+			movement_state = PlayerMovementState.ATTACK
+			player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+			
+			# early out of double jump anim if it's running: it will break midair attack combos otherwise.
+			if (anim_tree.get("parameters/DoubleJumpShot/active") == true):
+				anim_tree.set("parameters/DoubleJumpShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+			
+			anim_tree.set("parameters/AttackAirShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			current_oneshot_anim = "AttackAirShot1"
+			attack_type = "air"
+			current_weapon.visible = true
+			sword_trail.trail_enabled = true
+			weapon_hitbox.monitoring = true
+			# swap to holding weapon animations
+			weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+			attack_combo_stage += 1
+		# if already attacking, determine if the attack combo is continued.
+		else:
+			match attack_combo_stage:
+				1:
+					var anim_duration: float = anim_tree.get("parameters/AttackAirShot1/time")
+					if anim_duration >= 0.1 && anim_duration <= 0.9:
+						attack_type = "air"
+						continue_attack_chain = true
+						vanish_timer.start(vanish_timer_duration)
+				2:
+					var anim_duration: float = anim_tree.get("parameters/AttackAirShot2/time")
+					if anim_duration >= 0.1 && anim_duration <= 0.9:
+						attack_type = "air"
+						continue_attack_chain = true
+						vanish_timer.start(vanish_timer_duration)
 
 
 func weapon_action_parry() -> void:
@@ -769,49 +794,65 @@ func set_anim_blend(delta: float) -> void:
 
 # determine what happens when specific animations end.
 func _on_animation_tree_animation_finished(anim_name):
-	# attack animation combo chain continuation logic
+	
 	if movement_state == PlayerMovementState.ATTACK:
-		# reset hit reg for each nearby object at the end of each attack anim.
-		for obj in overlapping_objects:
-			obj.hit_received = false
-		
-		# if combo is continuing, determine which animation to play.
-		if continue_attack_chain == true:
+		# if in attack state, determine which type of weapon action was executed.
+		match current_weapon_action:
+			"attack":
+				# reset hit reg for each nearby object at the end of each attack anim.
+				for obj in overlapping_objects:
+					obj.hit_received = false
+				
+				# if combo is continuing, determine which animation to play.
+				if continue_attack_chain == true:
+					
+					# attack animation combo chain continuation logic
+					if anim_name == "AttackComboGround1":
+						attack_combo_stage += 1
+						anim_tree.set("parameters/AttackGroundShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+						current_oneshot_anim = "AttackGroundShot2"
+						
+					elif anim_name == "AttackComboGround2":
+						attack_combo_stage += 1
+						anim_tree.set("parameters/AttackGroundShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+						current_oneshot_anim = "AttackGroundShot3"
+						
+					elif anim_name == "extra_anims/AttackComboAir1":
+						attack_combo_stage += 1
+						anim_tree.set("parameters/AttackAirShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+						current_oneshot_anim = "AttackAirShot2"
+						
+					elif anim_name == "extra_anims/AttackComboAir2":
+						attack_combo_stage += 1
+						anim_tree.set("parameters/AttackAirShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+						current_oneshot_anim = "AttackAirShot3"
+						air_combo_complete = true
+					
+				# if combo is ending, reset player state.
+				else:
+					air_combo_complete = true
+					print("AYOOO")
+					movement_state = PlayerMovementState.IDLE
+					current_weapon_action = "none"
+					attack_combo_stage = 0
+					attack_type = "none"
+					weapon_hitbox.monitoring = false # disable hit detection on player's current_weapon.
+					
+					# start timer again so that there is a buffer between when combat ends and when weapon vanishes
+					vanish_timer.start(vanish_timer_duration)
+				
+				# always set back to false so that future combo animations don't play automatically.
+				continue_attack_chain = false
 			
-			if anim_name == "AttackComboGround1":
-				attack_combo_stage += 1
-				anim_tree.set("parameters/AttackGroundShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_oneshot_anim = "AttackGroundShot2"
-				
-			elif anim_name == "AttackComboGround2":
-				attack_combo_stage += 1
-				anim_tree.set("parameters/AttackGroundShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_oneshot_anim = "AttackGroundShot3"
-				
-			elif anim_name == "extra_anims/AttackComboAir1":
-				attack_combo_stage += 1
-				anim_tree.set("parameters/AttackAirShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_oneshot_anim = "AttackAirShot2"
-				
-			elif anim_name == "extra_anims/AttackComboAir2":
-				attack_combo_stage += 1
-				anim_tree.set("parameters/AttackAirShot3/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-				current_oneshot_anim = "AttackAirShot3"
-				air_combo_complete = true
+			"parry":
+				pass
 			
-		# if combo is ending, reset player state.
-		else:
-			air_combo_complete = true
-			movement_state = PlayerMovementState.IDLE
-			attack_combo_stage = 0
-			attack_type = "none"
-			# start timer again so that there is a buffer between when combat ends and when weapon vanishes
-			vanish_timer.start(vanish_timer_duration)
-			weapon_hitbox.monitoring = false
-		
-		# always set back to false so that future combo animations don't play automatically.
-		continue_attack_chain = false
-		
+			"swing":
+				pass
+			
+			"ultimate":
+				pass
+	
 	# when damage animation ends, resume normal movement states
 	elif movement_state == PlayerMovementState.DAMAGED:
 		if anim_name == "extra_anims/TakeDamageFront" || anim_name == "extra_anims/TakeDamageBack" || anim_name == "extra_anims/TakeDamageLeft" || anim_name == "extra_anims/TakeDamageRight":
