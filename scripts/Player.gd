@@ -69,6 +69,14 @@ var overlapping_objects: Array[Node3D]
 var targeted_object: Node3D = null
 @export var vanish_timer_duration: float = 15.0
 
+# weapon actions dictionary w/ defaults
+var weapon_actions = {
+	"action1": "attack",
+	"action2": "parry",
+	"action3": "swing",
+	"action4": "ultimate",
+}
+
 enum PlayerMovementState {
 	IDLE = 0,
 	WALK = 1,
@@ -146,9 +154,9 @@ func _input(event):
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
 	
-	# handle what happens when the player attacks.
+	# handle what happens when the player presses different weapon actions in combat.
 	# using 'event.' instead of 'Input.' for better input event buffering.
-	handle_weapon_actions(event)
+	determine_weapon_action_handles(event)
 
 
 # determine if player rotates relative to the camera or relative to an enemy or object.
@@ -620,72 +628,111 @@ func rotate_cam_joypad(delta: float) -> void:
 	$SpringArm3D.rotation.x = clamp($SpringArm3D.rotation.x, -1.4, 0.3)
 	
 
-func handle_weapon_actions(event) -> void:
-	if movement_state != PlayerMovementState.DAMAGED:
-		if event.is_action_pressed("attack"):
-			# grounded attacks
-			if is_on_floor():
-				# only begin first animation if not already in ATTACK state.
-				if movement_state != PlayerMovementState.ATTACK:
-					movement_state = PlayerMovementState.ATTACK
-					player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
-					
-					anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-					current_oneshot_anim = "AttackGroundShot1"
-					attack_type = "ground"
-					current_weapon.visible = true
-					sword_trail.trail_enabled = true
-					weapon_hitbox.monitoring = true
-					# swap to holding weapon animations
-					weapon_blend = 1 # no blend needed since we launch straight into an attack anim
-					attack_combo_stage += 1
-				# if already attacking, determine if the attack combo is continued.
-				else:
-					match attack_combo_stage:
-						1:
-							var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
-							if anim_duration >= 0.2 && anim_duration <= 0.7:
-								attack_type = "ground"
-								continue_attack_chain = true
-								vanish_timer.start(vanish_timer_duration)
-						2:
-							var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
-							if anim_duration > 0.25 && anim_duration < 0.85:
-								attack_type = "ground"
-								continue_attack_chain = true
-								vanish_timer.start(vanish_timer_duration)
-			# midair attacks
-			else:
-				if !air_combo_complete:
-					if movement_state != PlayerMovementState.ATTACK:
-						movement_state = PlayerMovementState.ATTACK
-						player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+func determine_weapon_action_handles(event) -> void:
+	if movement_state != PlayerMovementState.DAMAGED && movement_state != PlayerMovementState.DEAD:
+		# determine which weapon action to execute based on player assignments
+		if event.is_action_pressed("weaponaction1"):
+			handle_weapon_action(weapon_actions["action1"])
+		
+		elif event.is_action_pressed("weaponaction2"):
+			handle_weapon_action(weapon_actions["action2"])
+		
+		elif event.is_action_pressed("weaponaction3"):
+			handle_weapon_action(weapon_actions["action3"])
+		
+		elif event.is_action_pressed("weaponaction4"):
+			handle_weapon_action(weapon_actions["action4"])
 
-						anim_tree.set("parameters/AttackAirShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-						current_oneshot_anim = "AttackAirShot1"
-						attack_type = "air"
-						current_weapon.visible = true
-						sword_trail.trail_enabled = true
-						weapon_hitbox.monitoring = true
-						# swap to holding weapon animations
-						weapon_blend = 1 # no blend needed since we launch straight into an attack anim
-						attack_combo_stage += 1
-						pass
-					# if already attacking, determine if the attack combo is continued.
-					else:
-						match attack_combo_stage:
-							1:
-								var anim_duration: float = anim_tree.get("parameters/AttackAirShot1/time")
-								if anim_duration >= 0.1 && anim_duration <= 0.9:
-									attack_type = "air"
-									continue_attack_chain = true
-									vanish_timer.start(vanish_timer_duration)
-							2:
-								var anim_duration: float = anim_tree.get("parameters/AttackAirShot2/time")
-								if anim_duration >= 0.1 && anim_duration <= 0.9:
-									attack_type = "air"
-									continue_attack_chain = true
-									vanish_timer.start(vanish_timer_duration)
+
+func handle_weapon_action(command: String) -> void:
+	match command:
+		"attack":
+			weapon_action_attack()
+		"parry":
+			weapon_action_parry()
+		"swing":
+			weapon_action_swing()
+		"ultimate":
+			weapon_action_ultimate()
+		_:
+			print("Not a valid weapon action.")
+
+
+func weapon_action_attack() -> void:
+	# grounded attacks
+	if is_on_floor():
+		# only begin first animation if not already in ATTACK state.
+		if movement_state != PlayerMovementState.ATTACK:
+			movement_state = PlayerMovementState.ATTACK
+			player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+			
+			anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+			current_oneshot_anim = "AttackGroundShot1"
+			attack_type = "ground"
+			current_weapon.visible = true
+			sword_trail.trail_enabled = true
+			weapon_hitbox.monitoring = true
+			# swap to holding weapon animations
+			weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+			attack_combo_stage += 1
+		# if already attacking, determine if the attack combo is continued.
+		else:
+			match attack_combo_stage:
+				1:
+					var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
+					if anim_duration >= 0.2 && anim_duration <= 0.7:
+						attack_type = "ground"
+						continue_attack_chain = true
+						vanish_timer.start(vanish_timer_duration)
+				2:
+					var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
+					if anim_duration > 0.25 && anim_duration < 0.85:
+						attack_type = "ground"
+						continue_attack_chain = true
+						vanish_timer.start(vanish_timer_duration)
+	# midair attacks
+	else:
+		if !air_combo_complete:
+			if movement_state != PlayerMovementState.ATTACK:
+				movement_state = PlayerMovementState.ATTACK
+				player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+				
+				anim_tree.set("parameters/AttackAirShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				current_oneshot_anim = "AttackAirShot1"
+				attack_type = "air"
+				current_weapon.visible = true
+				sword_trail.trail_enabled = true
+				weapon_hitbox.monitoring = true
+				# swap to holding weapon animations
+				weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+				attack_combo_stage += 1
+			# if already attacking, determine if the attack combo is continued.
+			else:
+				match attack_combo_stage:
+					1:
+						var anim_duration: float = anim_tree.get("parameters/AttackAirShot1/time")
+						if anim_duration >= 0.1 && anim_duration <= 0.9:
+							attack_type = "air"
+							continue_attack_chain = true
+							vanish_timer.start(vanish_timer_duration)
+					2:
+						var anim_duration: float = anim_tree.get("parameters/AttackAirShot2/time")
+						if anim_duration >= 0.1 && anim_duration <= 0.9:
+							attack_type = "air"
+							continue_attack_chain = true
+							vanish_timer.start(vanish_timer_duration)
+
+
+func weapon_action_parry() -> void:
+	print("parry!")
+
+
+func weapon_action_swing()-> void:
+	print("swing!")
+
+
+func weapon_action_ultimate() -> void:
+	print("ult!")
 
 
 func handle_death(delta: float) -> void:

@@ -1,4 +1,4 @@
-[gd_resource type="AnimationLibrary" load_steps=15 format=3 uid="uid://cnlqrfubu6xh0"]
+[gd_resource type="AnimationLibrary" load_steps=17 format=3 uid="uid://cnlqrfubu6xh0"]
 
 [ext_resource type="Animation" uid="uid://caei84638isnj" path="res://Animations/DoubleJump.res" id="1_f5h1h"]
 [ext_resource type="Animation" uid="uid://lp34v2scw3q1" path="res://Animations/wielder_idleweapon.res" id="2_c0uag"]
@@ -14,6 +14,8 @@
 [ext_resource type="Animation" uid="uid://be6ovb6x1n1v4" path="res://Animations/wielder_attackcombo_air3.res" id="12_kysdr"]
 [ext_resource type="Animation" uid="uid://b0vy8nyxoomhq" path="res://Animations/wielder_death_front.res" id="13_3nyju"]
 [ext_resource type="Animation" uid="uid://cb3dydth8y1tt" path="res://Animations/wielder_dead_front.res" id="14_7hjon"]
+[ext_resource type="Animation" uid="uid://dqnog72buu4uj" path="res://Animations/wielder_parry.res" id="15_nds65"]
+[ext_resource type="Animation" uid="uid://drppyhiacpl26" path="res://Animations/wielder_parrysuccess.res" id="16_xbj88"]
 
 [resource]
 _data = {
@@ -24,6 +26,8 @@ _data = {
 "DeathFront": ExtResource("13_3nyju"),
 "DoubleJump": ExtResource("1_f5h1h"),
 "IdleWeapon": ExtResource("2_c0uag"),
+"Parry": ExtResource("15_nds65"),
+"ParrySuccess": ExtResource("16_xbj88"),
 "RunWeapon": ExtResource("3_dksl4"),
 "TakeDamage1": ExtResource("4_fqne3"),
 "TakeDamageBack": ExtResource("6_mlpkv"),

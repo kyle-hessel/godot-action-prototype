@@ -605,7 +605,7 @@ func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -
 func find_relative_direction(from: Vector3, to: Vector3) -> String:
 	var angle_diff: float = rad_to_deg(from.signed_angle_to(to, Vector3.UP))
 	#print("angle diff: ", angle_diff)
-							
+	
 	if angle_diff < 45.0 && angle_diff >= -45.0:
 		return "back"
 	elif angle_diff < -45.0 && angle_diff >= -135.0:
