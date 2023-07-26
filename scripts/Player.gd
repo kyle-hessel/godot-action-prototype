@@ -135,8 +135,11 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	
 	#print(current_weapon_action)
-	print(continue_attack_chain)
+	#print(continue_attack_chain)
 	#print(air_combo_complete)
+	#print(player_speed_current)
+	#print(velocity.length())
+	#print(movement_state)
 	
 	# for visual debug
 	$SpringArmVisualizer.position = $SpringArm3D.position
@@ -147,12 +150,10 @@ func _physics_process(delta: float) -> void:
 			velocity = Vector3(0, velocity.y, 0)
 		elif attack_type == "air":
 			velocity = Vector3.ZERO
+		elif attack_type == "parry":
+			velocity = Vector3.ZERO
 		elif attack_type == "none":
 			velocity = Vector3.ZERO
-	
-	#print(player_speed_current)
-	#print(velocity.length())
-	#print(movement_state)
 
 
 func _input(event):
@@ -271,6 +272,8 @@ func determine_player_movement_state(delta: float) -> void:
 					handle_root_motion(delta)
 				elif attack_type == "air":
 					handle_root_motion(delta, root_motion_multiplier * 0.5)
+				elif attack_type == "parry":
+					handle_root_motion(delta)
 				
 			# if taking damage, reset attack combo, calculate movement w/ root motion
 			elif movement_state == PlayerMovementState.DAMAGED:
@@ -666,8 +669,9 @@ func handle_weapon_action(command: String) -> void:
 					current_weapon_action = command
 		"parry":
 			if current_weapon_action == "none":
-				weapon_action_parry()
-				#current_weapon_action = command
+				if is_on_floor():
+					weapon_action_parry()
+					current_weapon_action = command
 		"swing":
 			if current_weapon_action == "none":
 				weapon_action_swing()
@@ -749,6 +753,19 @@ func weapon_action_attack() -> void:
 
 
 func weapon_action_parry() -> void:
+	# switch to attack state. do not check if already in attack state, as earlier current_weapon_action check already guarantees this.
+	movement_state = PlayerMovementState.ATTACK
+	
+	player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
+	
+	anim_tree.set("parameters/ParryShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	current_oneshot_anim = "ParryShot"
+	attack_type = "parry"
+	current_weapon.visible = true
+	sword_trail.trail_enabled = true
+	# swap to holding weapon animations
+	weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+	
 	print("parry!")
 
 
@@ -831,7 +848,6 @@ func _on_animation_tree_animation_finished(anim_name):
 				# if combo is ending, reset player state.
 				else:
 					air_combo_complete = true
-					print("AYOOO")
 					movement_state = PlayerMovementState.IDLE
 					current_weapon_action = "none"
 					attack_combo_stage = 0
@@ -845,8 +861,16 @@ func _on_animation_tree_animation_finished(anim_name):
 				continue_attack_chain = false
 			
 			"parry":
-				pass
-			
+				if anim_name == "extra_anims/Parry":
+					movement_state = PlayerMovementState.IDLE
+					current_weapon_action = "none"
+					attack_type = "none"
+					
+					# start timer again so that there is a buffer between when combat ends and when weapon vanishes
+					vanish_timer.start(vanish_timer_duration)
+					
+				elif anim_name == "extra_anims/ParrySuccess":
+					pass
 			"swing":
 				pass
 			
