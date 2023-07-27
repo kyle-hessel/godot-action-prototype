@@ -752,6 +752,7 @@ func weapon_action_attack() -> void:
 						vanish_timer.start(vanish_timer_duration)
 
 
+# start the parry action. A chunk of parry logic is housed in take_damage.
 func weapon_action_parry() -> void:
 	# switch to attack state. do not check if already in attack state, as earlier current_weapon_action check already guarantees this.
 	movement_state = PlayerMovementState.ATTACK
@@ -764,7 +765,7 @@ func weapon_action_parry() -> void:
 	current_weapon.visible = true
 	sword_trail.trail_enabled = true
 	# swap to holding weapon animations
-	weapon_blend = 1 # no blend needed since we launch straight into an attack anim
+	weapon_blend = 1 # no blend needed since we launch straight into parry anim
 	
 	print("parry!")
 
@@ -866,11 +867,14 @@ func _on_animation_tree_animation_finished(anim_name):
 					current_weapon_action = "none"
 					attack_type = "none"
 					
-					# start timer again so that there is a buffer between when combat ends and when weapon vanishes
 					vanish_timer.start(vanish_timer_duration)
 					
 				elif anim_name == "extra_anims/ParrySuccess":
-					pass
+					movement_state = PlayerMovementState.IDLE
+					current_weapon_action = "none"
+					attack_type = "none"
+					
+					vanish_timer.start(vanish_timer_duration)
 			"swing":
 				pass
 			
@@ -929,45 +933,86 @@ func _on_vanish_timer_timeout() -> void:
 # hit registration on enemies
 func _on_sword_hitbox_area_body_entered(body: Node3D):
 	if movement_state == PlayerMovementState.ATTACK:
-		if !body.hit_received:
-			if body is Enemy:
-				# might want to make this vary based on animation.
-				var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
-				var anim_progress: float = anim_tree.get(attack_anim_string)
-				var current_attack_damage_anim_cutoff = attack_anim_damage_cutoff
-				
-				# make the wind-up longer for the player's last combo animation. will probably need tweaking later.
-				if current_oneshot_anim == "AttackGroundShot3":
-					current_attack_damage_anim_cutoff = attack_anim_damage_cutoff * 1.2
-				
-				# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
-				if body.i_frames.is_stopped() && anim_progress > current_attack_damage_anim_cutoff:
-					#print(anim_progress)
-					#print(current_attack_damage_anim_cutoff)
-					# mark that the body has received a hit from this attack anim so that it doesn't receive extra.
-					# do this per-object so that attacks can hit multiple enemies at once.
-					body.hit_received = true
-					
-					var damage_result: String
-					# inflict damage on the enemy, let them handle the details.
-					if current_oneshot_anim == "AttackGroundShot3" || current_oneshot_anim == "AttackAirShot3":
-						#inflict extra damage at end of combos.
-						damage_result = body.take_damage(player_damage_stat * ground_combo_damage_multiplier, attack_combo_stage)
-					else:
-						damage_result = body.take_damage(player_damage_stat, attack_combo_stage)
-					
-					# if enemy dies from this hit, drop targeting and remove them from overlapping objects.
-					# can add EXP gain, etc here later
-					if damage_result == "dead":
-						targeted_object = null
-						targeting = false
-						tracking = false
-						target_icon.visible = false
-						overlapping_objects.erase(body)
+		# check against weapon action so that certain states that fall under the ATTACK umbrella have different behaviors,
+		# and so that others, such as parry, don't trigger damage on enemies at all through the sword's actual hitbox.
+		match current_weapon_action:
+			"attack":
+				if !body.hit_received:
+					if body is Enemy:
+						# might want to make this vary based on animation.
+						var attack_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+						var anim_progress: float = anim_tree.get(attack_anim_string)
+						var current_attack_damage_anim_cutoff = attack_anim_damage_cutoff
+						
+						# make the wind-up longer for the player's last combo animation. will probably need tweaking later.
+						if current_oneshot_anim == "AttackGroundShot3":
+							current_attack_damage_anim_cutoff = attack_anim_damage_cutoff * 1.2
+						
+						# only register hit if enemy has no i-frames and if player attack animation has properly ramped up.
+						if body.i_frames.is_stopped() && anim_progress > current_attack_damage_anim_cutoff:
+							#print(anim_progress)
+							#print(current_attack_damage_anim_cutoff)
+							# mark that the body has received a hit from this attack anim so that it doesn't receive extra.
+							# do this per-object so that attacks can hit multiple enemies at once.
+							body.hit_received = true
+							
+							var damage_result: String
+							# inflict damage on the enemy, let them handle the details.
+							if current_oneshot_anim == "AttackGroundShot3" || current_oneshot_anim == "AttackAirShot3":
+								#inflict extra damage at end of combos.
+								damage_result = body.take_damage(player_damage_stat * ground_combo_damage_multiplier, attack_combo_stage)
+							else:
+								damage_result = body.take_damage(player_damage_stat, attack_combo_stage)
+							
+							# if enemy dies from this hit, drop targeting and remove them from overlapping objects.
+							# can add EXP gain, etc here later
+							if damage_result == "dead":
+								targeted_object = null
+								targeting = false
+								tracking = false
+								target_icon.visible = false
+								overlapping_objects.erase(body)
+			"swing":
+				pass
+			"ultimate":
+				pass
 
 
 func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
-	# take damage.
+	# if the player is parrying when they're supposed to receive damage, parry instead of receiving said damage if the below requirements are met.
+	if current_weapon_action == "parry":
+		# don't trigger parry success again if it is ongoing while an enemy attacks; that should be the only reason this check is necessary.
+		if current_oneshot_anim != "ParrySuccessShot":
+			var parry_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
+			var anim_progress: float = anim_tree.get(parry_anim_string)
+			
+			# only succeed on the parry if it is timed well; the beginning and end of the animation shouldn't be included, but rather the apex of the parry.
+			# don't return early if this isn't true, instead let the rest of the function play out and deal damage to the player.
+			if anim_progress > 0.3 && anim_progress < 0.7:
+			
+				anim_tree.set("parameters/ParryShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+				anim_tree.set("parameters/ParrySuccessShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+				
+				# start player's i-frames.
+				# there is a potential that if InvincibilityTimer is still running when a player parries, the parry won't succeed,
+				# seeing that the enemy only calls the player's take_damage function if they don't have any i-frames.
+				# due to the length of the parry success animation, though, I don't think this will be likely. just an edge case to keep in mind.
+				i_frames.start()
+				
+				print("parry success!")
+				return "parry"
+			
+			else:
+				# maybe have some kind of visual effect here later indicating that the parry failed.
+				print("parry failed!")
+			
+		# if the parry weapon action is ongoing but the parry success animation is playing, return 'none' to avoid stunning enemy repeatedly. 
+		# this should be an uncommon edge case due to i-frames, if it's even possible at all.
+		else:
+			return "none"
+		
+	
+	# take damage if the player isn't parrying or if their parry failed.
 	player_health_current -= amount
 	player_health_current = clamp(player_health_current, 0.0, player_health_max)
 	
@@ -980,6 +1025,9 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
 	weapon_hitbox.monitoring = false
 	player_speed_current = 0
 	attack_combo_stage = 0
+	# ensure there isn't still an active weapon action
+	current_weapon_action = "none"
+	attack_type = "none"
 	
 	# if player is dead, early out of this function and instead call die after damage is dealt.
 	if player_health_current == 0.0:
@@ -1016,7 +1064,6 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
 	i_frames.start()
 	
 	return "alive"
-
 
 func die() -> void:
 	# disable most collisions so that the enemy can't detect the player and vice versa.
