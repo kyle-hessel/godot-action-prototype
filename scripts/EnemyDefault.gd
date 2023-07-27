@@ -225,6 +225,8 @@ func handle_attack_state(delta: float) -> void:
 							else:
 								targeted_player = null
 							
+						elif damage_result == "parry":
+							print("Fuck!!")
 
 
 func handle_guard_state(delta: float) -> void:
@@ -480,6 +482,10 @@ func take_damage(amount: float, player_combo_stage: int) -> String:
 	i_frames.start()
 	
 	return "alive"
+
+
+func take_parry() -> void:
+	pass
 
 
 func die() -> void:
