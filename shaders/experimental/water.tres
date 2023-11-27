@@ -27,7 +27,6 @@ default_value = Color(4.04298e-05, 0.437882, 0.846476, 1)
 noise_type = 2
 fractal_type = 0
 cellular_distance_function = 1
-cellular_jitter = 1.0
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_ujhfy"]
 seamless = true
@@ -51,7 +50,6 @@ noise_type = 2
 seed = 3
 fractal_type = 0
 cellular_distance_function = 1
-cellular_jitter = 1.0
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_8egvf"]
 seamless = true
