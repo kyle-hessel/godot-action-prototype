@@ -34,7 +34,7 @@ var is_jumping: bool = false
 var attack_combo_stage: int = 0
 var continue_attack_chain: bool = false
 var air_combo_complete: bool = false
-var attack_type: String = "none"
+var attack_type: AttackType = AttackType.NONE
 var current_oneshot_anim: String
 @export var attack_anim_damage_cutoff: float = 0.25
 @export var death_front_cutoff: float = 0.75
@@ -70,14 +70,14 @@ var targeted_object: Node3D = null
 @export var vanish_timer_duration: float = 15.0
 
 # weapon actions dictionary w/ defaults
-var weapon_actions = {
-	"action1": "attack",
-	"action2": "parry",
-	"action3": "swing",
-	"action4": "ultimate",
+var weapon_actions: Dictionary = {
+	"action1": WeaponAction.ATTACK,
+	"action2": WeaponAction.PARRY,
+	"action3": WeaponAction.SWING,
+	"action4": WeaponAction.ULTIMATE,
 }
 
-var current_weapon_action: String = "none"
+var current_weapon_action: WeaponAction = WeaponAction.NONE
 
 enum PlayerMovementState {
 	IDLE = 0,
@@ -89,6 +89,36 @@ enum PlayerMovementState {
 	DAMAGED = 6,
 	STUN = 7,
 	DEAD = 8
+}
+
+enum AttackType {
+	GROUND = 0,
+	AIR = 1,
+	PARRY = 2,
+	NONE = 3
+}
+
+enum WeaponAction {
+	ATTACK = 0,
+	PARRY = 1,
+	SWING = 2,
+	ULTIMATE = 3,
+	NONE = 4
+}
+
+enum HitDirection {
+	FRONT = 0,
+	BACK = 1,
+	RIGHT = 2,
+	LEFT = 3,
+	MAX = 4
+}
+
+enum DamageResult {
+	ALIVE = 0,
+	DEAD = 1,
+	PARRY = 2,
+	NONE = 3
 }
 
 var movement_state: PlayerMovementState = PlayerMovementState.IDLE
@@ -146,17 +176,17 @@ func _physics_process(delta: float) -> void:
 	
 	# if attacking or damaged, reset velocity vector at the end of each physics tick to avoid accumulation of velocity.
 	if movement_state == PlayerMovementState.ATTACK || movement_state == PlayerMovementState.DAMAGED:
-		if attack_type == "ground":
+		if attack_type == AttackType.GROUND:
 			velocity = Vector3(0, velocity.y, 0)
-		elif attack_type == "air":
+		elif attack_type == AttackType.AIR:
 			velocity = Vector3.ZERO
-		elif attack_type == "parry":
+		elif attack_type == AttackType.PARRY:
 			velocity = Vector3.ZERO
-		elif attack_type == "none":
+		elif attack_type == AttackType.NONE:
 			velocity = Vector3.ZERO
 
 
-func _input(event):
+func _input(event: InputEvent):
 	# camera movement w/ mouse (should see if we can only call this if using a keyboard input this frame?)
 	# https://godotforums.org/d/22759-detect-if-input-comes-from-controller-or-keyboard
 	rotate_cam_kb_m(event)
@@ -268,11 +298,11 @@ func determine_player_movement_state(delta: float) -> void:
 		else:
 			# if attacking, calculate movement w/ root motion
 			if movement_state == PlayerMovementState.ATTACK:
-				if attack_type == "ground":
+				if attack_type == AttackType.GROUND:
 					handle_root_motion(delta)
-				elif attack_type == "air":
+				elif attack_type == AttackType.AIR:
 					handle_root_motion(delta, root_motion_multiplier * 0.5)
-				elif attack_type == "parry":
+				elif attack_type == AttackType.PARRY:
 					handle_root_motion(delta)
 				
 			# if taking damage, reset attack combo, calculate movement w/ root motion
@@ -616,7 +646,7 @@ func determine_cam_lock_on(delta: float) -> void:
 			$SpringArm3D.position = lerp($SpringArm3D.position, $SpringArmTarget.position, cam_lerp_rate * delta)
 
 
-func rotate_cam_kb_m(event) -> void:
+func rotate_cam_kb_m(event: InputEvent) -> void:
 	# mouse spring arm rotation
 	if (event is InputEventMouseMotion):
 		# mouse x movement (in 2d monitor space) becomes spring arm rotation in 3D space around the Y axis - left/right rotation.
@@ -641,7 +671,7 @@ func rotate_cam_joypad(delta: float) -> void:
 
 # translates button presses to appropriate assigned weapon actions using value fetching from the weapon_actions dictionary,
 # and sends this off to handle_weapon_action to begin executing the appropriate action.
-func interpret_weapon_action_handles(event) -> void:
+func interpret_weapon_action_handles(event: InputEvent) -> void:
 	if movement_state != PlayerMovementState.DAMAGED && movement_state != PlayerMovementState.DEAD:
 		# determine which weapon action to execute based on player assignments
 		if event.is_action_pressed("weaponaction1"):
@@ -660,24 +690,24 @@ func interpret_weapon_action_handles(event) -> void:
 # funnel inputted weapon action into the appropriate function call.
 # code is a little redundant here, but needs to be due to special cases,
 # such as chained attack combos in the 'attack' weapon action (default attacks).
-func handle_weapon_action(command: String) -> void:
+func handle_weapon_action(command: WeaponAction) -> void:
 	match command:
-		"attack":
-			if current_weapon_action == "none" || current_weapon_action == "attack":
+		WeaponAction.ATTACK:
+			if current_weapon_action == WeaponAction.NONE || current_weapon_action == WeaponAction.ATTACK:
 				if !air_combo_complete:
 					weapon_action_attack()
 					current_weapon_action = command
-		"parry":
-			if current_weapon_action == "none":
+		WeaponAction.PARRY:
+			if current_weapon_action == WeaponAction.NONE:
 				if is_on_floor():
 					weapon_action_parry()
 					current_weapon_action = command
-		"swing":
-			if current_weapon_action == "none":
+		WeaponAction.SWING:
+			if current_weapon_action == WeaponAction.NONE:
 				weapon_action_swing()
 				#current_weapon_action = command
-		"ultimate":
-			if current_weapon_action == "none":
+		WeaponAction.ULTIMATE:
+			if current_weapon_action == WeaponAction.NONE:
 				weapon_action_ultimate()
 				#current_weapon_action = command
 		_:
@@ -694,7 +724,7 @@ func weapon_action_attack() -> void:
 			
 			anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			current_oneshot_anim = "AttackGroundShot1"
-			attack_type = "ground"
+			attack_type = AttackType.GROUND
 			current_weapon.visible = true
 			sword_trail.trail_enabled = true
 			weapon_hitbox.monitoring = true # enable hit detection on player's current_weapon.
@@ -707,13 +737,13 @@ func weapon_action_attack() -> void:
 				1:
 					var anim_duration: float = anim_tree.get("parameters/AttackGroundShot1/time")
 					if anim_duration >= 0.2 && anim_duration <= 0.7:
-						attack_type = "ground"
+						attack_type = AttackType.GROUND
 						continue_attack_chain = true
 						vanish_timer.start(vanish_timer_duration)
 				2:
 					var anim_duration: float = anim_tree.get("parameters/AttackGroundShot2/time")
 					if anim_duration > 0.25 && anim_duration < 0.85:
-						attack_type = "ground"
+						attack_type = AttackType.GROUND
 						continue_attack_chain = true
 						vanish_timer.start(vanish_timer_duration)
 	# midair attacks
@@ -728,7 +758,7 @@ func weapon_action_attack() -> void:
 			
 			anim_tree.set("parameters/AttackAirShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			current_oneshot_anim = "AttackAirShot1"
-			attack_type = "air"
+			attack_type = AttackType.AIR
 			current_weapon.visible = true
 			sword_trail.trail_enabled = true
 			weapon_hitbox.monitoring = true
@@ -741,13 +771,13 @@ func weapon_action_attack() -> void:
 				1:
 					var anim_duration: float = anim_tree.get("parameters/AttackAirShot1/time")
 					if anim_duration >= 0.1 && anim_duration <= 0.9:
-						attack_type = "air"
+						attack_type = AttackType.AIR
 						continue_attack_chain = true
 						vanish_timer.start(vanish_timer_duration)
 				2:
 					var anim_duration: float = anim_tree.get("parameters/AttackAirShot2/time")
 					if anim_duration >= 0.1 && anim_duration <= 0.9:
-						attack_type = "air"
+						attack_type = AttackType.AIR
 						continue_attack_chain = true
 						vanish_timer.start(vanish_timer_duration)
 
@@ -761,7 +791,7 @@ func weapon_action_parry() -> void:
 	
 	anim_tree.set("parameters/ParryShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	current_oneshot_anim = "ParryShot"
-	attack_type = "parry"
+	attack_type = AttackType.PARRY
 	current_weapon.visible = true
 	sword_trail.trail_enabled = true
 	# swap to holding weapon animations
@@ -816,7 +846,7 @@ func _on_animation_tree_animation_finished(anim_name):
 	if movement_state == PlayerMovementState.ATTACK:
 		# if in attack state, determine which type of weapon action was executed.
 		match current_weapon_action:
-			"attack":
+			WeaponAction.ATTACK:
 				# reset hit reg for each nearby object at the end of each attack anim.
 				for obj in overlapping_objects:
 					obj.hit_received = false
@@ -850,9 +880,9 @@ func _on_animation_tree_animation_finished(anim_name):
 				else:
 					air_combo_complete = true
 					movement_state = PlayerMovementState.IDLE
-					current_weapon_action = "none"
+					current_weapon_action = WeaponAction.NONE
 					attack_combo_stage = 0
-					attack_type = "none"
+					attack_type = AttackType.NONE
 					weapon_hitbox.monitoring = false # disable hit detection on player's current_weapon.
 					
 					# start timer again so that there is a buffer between when combat ends and when weapon vanishes
@@ -861,24 +891,26 @@ func _on_animation_tree_animation_finished(anim_name):
 				# always set back to false so that future combo animations don't play automatically.
 				continue_attack_chain = false
 			
-			"parry":
+			WeaponAction.PARRY:
 				if anim_name == "extra_anims/Parry":
 					movement_state = PlayerMovementState.IDLE
-					current_weapon_action = "none"
-					attack_type = "none"
+					current_weapon_action = WeaponAction.NONE
+					attack_type = AttackType.NONE
 					
 					vanish_timer.start(vanish_timer_duration)
 					
 				elif anim_name == "extra_anims/ParrySuccess":
 					movement_state = PlayerMovementState.IDLE
-					current_weapon_action = "none"
-					attack_type = "none"
+					current_weapon_action = WeaponAction.NONE
+					attack_type = AttackType.NONE
 					
 					vanish_timer.start(vanish_timer_duration)
-			"swing":
+			WeaponAction.SWING:
 				pass
 			
-			"ultimate":
+			WeaponAction.ULTIMATE:
+				pass
+			_:
 				pass
 	
 	# when damage animation ends, resume normal movement states
@@ -936,7 +968,7 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 		# check against weapon action so that certain states that fall under the ATTACK umbrella have different behaviors,
 		# and so that others, such as parry, don't trigger damage on enemies at all through the sword's actual hitbox.
 		match current_weapon_action:
-			"attack":
+			WeaponAction.ATTACK:
 				if !body.hit_received:
 					if body is Enemy:
 						# might want to make this vary based on animation.
@@ -956,7 +988,7 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 							# do this per-object so that attacks can hit multiple enemies at once.
 							body.hit_received = true
 							
-							var damage_result: String
+							var damage_result: DamageResult
 							# inflict damage on the enemy, let them handle the details.
 							if current_oneshot_anim == "AttackGroundShot3" || current_oneshot_anim == "AttackAirShot3":
 								#inflict extra damage at end of combos.
@@ -966,21 +998,21 @@ func _on_sword_hitbox_area_body_entered(body: Node3D):
 							
 							# if enemy dies from this hit, drop targeting and remove them from overlapping objects.
 							# can add EXP gain, etc here later
-							if damage_result == "dead":
+							if damage_result == DamageResult.DEAD:
 								targeted_object = null
 								targeting = false
 								tracking = false
 								target_icon.visible = false
 								overlapping_objects.erase(body)
-			"swing":
+			WeaponAction.SWING:
 				pass
-			"ultimate":
+			WeaponAction.ULTIMATE:
 				pass
 
 
-func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
+func take_damage(amount: float, enemy_forward_vector: Vector3) -> DamageResult:
 	# if the player is parrying when they're supposed to receive damage, parry instead of receiving said damage if the below requirements are met.
-	if current_weapon_action == "parry":
+	if current_weapon_action == WeaponAction.PARRY:
 		# don't trigger parry success again if it is ongoing while an enemy attacks; that should be the only reason this check is necessary.
 		if current_oneshot_anim != "ParrySuccessShot":
 			var parry_anim_string: String = "parameters/" + current_oneshot_anim + "/time"
@@ -1000,7 +1032,7 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
 				i_frames.start()
 				
 				print("parry success!")
-				return "parry"
+				return DamageResult.PARRY
 			
 			else:
 				# maybe have some kind of visual effect here later indicating that the parry failed.
@@ -1009,7 +1041,7 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
 		# if the parry weapon action is ongoing but the parry success animation is playing, return 'none' to avoid stunning enemy repeatedly. 
 		# this should be an uncommon edge case due to i-frames, if it's even possible at all.
 		else:
-			return "none"
+			return DamageResult.NONE
 		
 	
 	# take damage if the player isn't parrying or if their parry failed.
@@ -1026,32 +1058,32 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
 	player_speed_current = 0
 	attack_combo_stage = 0
 	# ensure there isn't still an active weapon action
-	current_weapon_action = "none"
-	attack_type = "none"
+	current_weapon_action = WeaponAction.NONE
+	attack_type = AttackType.NONE
 	
 	# if player is dead, early out of this function and instead call die after damage is dealt.
 	if player_health_current == 0.0:
 		die()
-		return "dead"
+		return DamageResult.DEAD
 	
 	movement_state = PlayerMovementState.DAMAGED
 	
 	# determine the direction the player was hit from.
 	var player_forward_vector: Vector3 = $starblade_wielder.transform.basis.z * -1.0
-	var hit_from: String = find_relative_direction(player_forward_vector, enemy_forward_vector)
+	var hit_from: HitDirection = find_relative_direction(player_forward_vector, enemy_forward_vector)
 	
 	# use hit direction and play the respective anim.
 	match hit_from:
-		"front":
+		HitDirection.FRONT:
 			anim_tree.set("parameters/TakeDamageFrontShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			current_oneshot_anim = "TakeDamageFrontShot"
-		"back":
+		HitDirection.BACK:
 			anim_tree.set("parameters/TakeDamageBackShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			current_oneshot_anim = "TakeDamageBackShot"
-		"right":
+		HitDirection.RIGHT:
 			anim_tree.set("parameters/TakeDamageRightShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			current_oneshot_anim = "TakeDamageRightShot"
-		"left":
+		HitDirection.LEFT:
 			anim_tree.set("parameters/TakeDamageLeftShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			current_oneshot_anim = "TakeDamageLeftShot"
 		_:
@@ -1063,7 +1095,7 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> String:
 	# start player's i-frames.
 	i_frames.start()
 	
-	return "alive"
+	return DamageResult.NONE
 
 func die() -> void:
 	# disable most collisions so that the enemy can't detect the player and vice versa.
@@ -1160,17 +1192,17 @@ func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -
 	facing_object_from_pos_lerp(obj, origin, target, up, delta)
 
 # returns front, back, left, or right.
-func find_relative_direction(from: Vector3, to: Vector3) -> String:
+func find_relative_direction(from: Vector3, to: Vector3) -> HitDirection:
 	var angle_diff: float = rad_to_deg(from.signed_angle_to(to, Vector3.UP))
 	#print("angle diff: ", angle_diff)
 							
 	if angle_diff < 45.0 && angle_diff >= -45.0:
-		return "back"
+		return HitDirection.BACK
 	elif angle_diff < -45.0 && angle_diff >= -135.0:
-		return "left"
+		return HitDirection.LEFT
 	elif angle_diff < 135.0 && angle_diff >= 45.0:
-		return "right"
+		return HitDirection.RIGHT
 	elif angle_diff >= 135.0 || angle_diff < -135.0:
-		return "front"
+		return HitDirection.FRONT
 	else:
-		return "?"
+		return HitDirection.MAX

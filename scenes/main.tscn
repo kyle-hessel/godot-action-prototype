@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3 uid="uid://wr13h1xbxd0v"]
+[gd_scene load_steps=42 format=3 uid="uid://wr13h1xbxd0v"]
 
 [ext_resource type="PackedScene" uid="uid://cc7svareltvw7" path="res://scenes/player.tscn" id="1_dha7o"]
 [ext_resource type="Script" path="res://scripts/Level.gd" id="1_wxnjq"]
@@ -167,6 +167,10 @@ shader_parameter/triplanar_offset = null
 shader_parameter/triplanar_sharpness = 0.5
 shader_parameter/NoiseTextureTriplanar = ExtResource("14_hvhqc")
 
+[sub_resource type="BoxMesh" id="BoxMesh_duyh7"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bwiw6"]
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_wxnjq")
 
@@ -285,3 +289,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.13082, 15.8552, -22.4127)
 sorting_offset = 102.0
 mesh = SubResource("SphereMesh_dph5r")
 surface_material_override/0 = SubResource("ShaderMaterial_b1eo8")
+
+[node name="RigidBody3D" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15.5492, -12.7801)
+collision_layer = 8
+collision_mask = 15
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D"]
+mesh = SubResource("BoxMesh_duyh7")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D"]
+shape = SubResource("BoxShape3D_bwiw6")

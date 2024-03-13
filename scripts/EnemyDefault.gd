@@ -66,6 +66,13 @@ enum EnemyType {
 	FLYING = 3
 }
 
+enum DamageResult {
+	ALIVE = 0,
+	DEAD = 1,
+	PARRY = 2,
+	NONE = 3
+}
+
 var movement_state: EnemyMovementState = EnemyMovementState.IDLE
 @export var enemy_type: EnemyType # set per enemy type in editor
 
@@ -216,16 +223,16 @@ func handle_attack_state(delta: float) -> void:
 						col["collider"].hit_received = true
 						
 						# inflict damage on the player, let them handle the details.
-						var damage_result: String = col["collider"].take_damage(enemy_normal_damage_stat, $EnemyMesh.transform.basis.z * -1.0)
+						var damage_result: DamageResult = col["collider"].take_damage(enemy_normal_damage_stat, $EnemyMesh.transform.basis.z * -1.0)
 						
-						if damage_result == "dead":
+						if damage_result == DamageResult.DEAD:
 							nearby_players.erase(col["collider"])
 							if !nearby_players.is_empty():
 								targeted_player = nearby_players[0]
 							else:
 								targeted_player = null
 							
-						elif damage_result == "parry":
+						elif damage_result == DamageResult.PARRY:
 							print("Fuck!!")
 
 
@@ -445,7 +452,7 @@ func find_random_pos_around_target(radius: float = 3.0, target_pos: Vector3 = ta
 	return target_pos + target_pos.normalized().rotated(Vector3.UP, deg_to_rad(random_angle)) * radius
 
 
-func take_damage(amount: float, player_combo_stage: int) -> String:
+func take_damage(amount: float, player_combo_stage: int) -> DamageResult:
 	# take damage.
 	enemy_health_current -= amount
 	enemy_health_current = clamp(enemy_health_current, 0.0, enemy_health_max)
@@ -462,7 +469,7 @@ func take_damage(amount: float, player_combo_stage: int) -> String:
 	# if enemy is dead, early out of this function and instead call die after damage is dealt.
 	if enemy_health_current == 0.0:
 		die()
-		return "dead"
+		return DamageResult.DEAD
 		
 	# switch enemy state to damaged.
 	movement_state = EnemyMovementState.DAMAGED
@@ -481,7 +488,7 @@ func take_damage(amount: float, player_combo_stage: int) -> String:
 	i_frames.wait_time = i_frames_in_sec
 	i_frames.start()
 	
-	return "alive"
+	return DamageResult.ALIVE
 
 
 func take_parry() -> void:
