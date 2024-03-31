@@ -26,6 +26,7 @@ var target_cam_bias: float = target_cam_bias_default
 @export var jump_velocity: float = 7.0
 @export var jump_velocity_multiplier: float = 1.25
 @export var max_jumps: int = 2
+var current_root_motion: Vector3
 @export var root_motion_multiplier: float = 4.0
 
 var has_direction: bool = false
@@ -48,6 +49,8 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var player_mesh: Node3D = $starblade_wielder
 @onready var player_cam: Camera3D = $SpringArm3D/PlayerCam
+@onready var combat_sweep_area: Area3D = $starblade_wielder/CombatSweepArea
+@onready var combat_sweep_shape: CollisionShape3D = $starblade_wielder/CombatSweepArea/CombatSweepShape
 @onready var anim_tree: AnimationTree = $starblade_wielder/AnimationTree
 @onready var anim_player: AnimationPlayer = $starblade_wielder/AnimationPlayer
 @onready var weapon_slot_left: Node3D = $starblade_wielder/Armature/Skeleton3D/LeftHandAttachment/WeaponSlotLeftHand
@@ -67,6 +70,7 @@ var viewport_wh: Vector2 = Vector2(viewport_width, viewport_height)
 
 var overlapping_objects: Array[Node3D]
 var targeted_object: Node3D = null
+var sweeping_objects: Array[Enemy]
 @export var vanish_timer_duration: float = 15.0
 
 # weapon actions dictionary w/ defaults
@@ -150,6 +154,8 @@ func _physics_process(delta: float) -> void:
 	
 	# figure out current target if there is one, so that we know what to lock onto.
 	determine_target()
+	
+	sweep_objects()
 	
 	# for default targeting or manually targeting enemies / objects. relies on determine_target in _input.
 	determine_cam_lock_on(delta)
@@ -432,14 +438,14 @@ func stop_player_movement(delta: float) -> void:
 func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
 	has_direction = false # ensure no added rotation movement lerping while attacking
 	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
-	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(Vector3.UP, $starblade_wielder.rotation.y) / delta
+	current_root_motion = anim_tree.get_root_motion_position().rotated(Vector3.UP, $starblade_wielder.rotation.y) / delta
 	
 	if lateral_only:
-		velocity.x += root_motion.x * rm_multiplier
-		velocity.z += root_motion.z * rm_multiplier
+		velocity.x += current_root_motion.x * rm_multiplier
+		velocity.z += current_root_motion.z * rm_multiplier
 	else:
 		# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-		velocity += root_motion * rm_multiplier
+		velocity += current_root_motion * rm_multiplier
 	
 	# still add gravity if not on floor
 	apply_only_gravity(delta)
@@ -466,6 +472,8 @@ func determine_target() -> void:
 					if targeted_object == null:
 						targeting = false
 						target_icon.visible = false
+					else:
+						stop_sweep_objects()
 				
 				# if false, clear.
 				else:
@@ -498,10 +506,14 @@ func determine_target() -> void:
 							if object_visibility_check(obj) == true:
 								# if everything succeeded, retarget to the given object and break out.
 								targeted_object = obj
+								if targeted_object != null:
+									stop_sweep_objects()
 								break
 							else:
 								# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
 								targeted_object = objects_visibility_check(overlapping_objects)
+								if targeted_object != null:
+									stop_sweep_objects()
 								break
 						
 				# if the next candidate was out of bounds, wrap back to the front of the array.
@@ -512,10 +524,14 @@ func determine_target() -> void:
 						if object_visibility_check(obj) == true:
 							# if everything succeeded, retarget to the given object and break out.
 							targeted_object = obj
+							if targeted_object != null:
+								stop_sweep_objects()
 							break
 						else:
 							# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
 							targeted_object = objects_visibility_check(overlapping_objects)
+							if targeted_object != null:
+								stop_sweep_objects()
 							break
 				
 				
@@ -546,10 +562,14 @@ func determine_target() -> void:
 							if object_visibility_check(obj) == true:
 								# if everything succeeded, retarget to the given object and break out.
 								targeted_object = obj
+								if targeted_object != null:
+									stop_sweep_objects()
 								break
 							else:
 								# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
 								targeted_object = objects_visibility_check(overlapping_objects_reversed)
+								if targeted_object != null:
+									stop_sweep_objects()
 								break
 				
 				# if the next candidate was out of bounds, wrap back to the front of the array.
@@ -560,10 +580,14 @@ func determine_target() -> void:
 						if object_visibility_check(obj) == true:
 							# if everything succeeded, retarget to the given object and break out.
 							targeted_object = obj
+							if targeted_object != null:
+								stop_sweep_objects()
 							break
 						else:
 							# if nothing succeeded, just fetch the nearest visible object. if this fails there may not be one.
 							targeted_object = objects_visibility_check(overlapping_objects_reversed)
+							if targeted_object != null:
+								stop_sweep_objects()
 							break
 
 
@@ -720,6 +744,8 @@ func weapon_action_attack() -> void:
 		# only begin first animation if not already in ATTACK state.
 		if movement_state != PlayerMovementState.ATTACK:
 			movement_state = PlayerMovementState.ATTACK
+			combat_sweep_area.monitoring = true
+			combat_sweep_shape.disabled = !combat_sweep_area.monitoring
 			player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
 			
 			anim_tree.set("parameters/AttackGroundShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
@@ -750,6 +776,8 @@ func weapon_action_attack() -> void:
 	else:
 		if movement_state != PlayerMovementState.ATTACK:
 			movement_state = PlayerMovementState.ATTACK
+			combat_sweep_area.monitoring = true
+			combat_sweep_shape.disabled = !combat_sweep_area.monitoring
 			player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
 			
 			# early out of double jump anim if it's running: it will break midair attack combos otherwise.
@@ -786,6 +814,8 @@ func weapon_action_attack() -> void:
 func weapon_action_parry() -> void:
 	# switch to attack state. do not check if already in attack state, as earlier current_weapon_action check already guarantees this.
 	movement_state = PlayerMovementState.ATTACK
+	#combat_sweep_area.monitoring = true
+	#combat_sweep_shape.disabled = !combat_sweep_area.monitoring
 	
 	player_speed_current = 0 # resets accel/decel to avoid immediate jumps after attack end
 	
@@ -853,6 +883,8 @@ func _on_animation_tree_animation_finished(anim_name):
 				
 				# if combo is continuing, determine which animation to play.
 				if continue_attack_chain == true:
+					combat_sweep_area.monitoring = true
+					combat_sweep_shape.disabled = !combat_sweep_area.monitoring
 					
 					# attack animation combo chain continuation logic
 					if anim_name == "AttackComboGround1":
@@ -881,6 +913,7 @@ func _on_animation_tree_animation_finished(anim_name):
 					air_combo_complete = true
 					movement_state = PlayerMovementState.IDLE
 					current_weapon_action = WeaponAction.NONE
+					stop_sweep_objects()
 					attack_combo_stage = 0
 					attack_type = AttackType.NONE
 					weapon_hitbox.monitoring = false # disable hit detection on player's current_weapon.
@@ -1054,6 +1087,7 @@ func take_damage(amount: float, enemy_forward_vector: Vector3) -> DamageResult:
 		var player_attack_anim: String = "parameters/" + current_oneshot_anim + "/request"
 		anim_tree.set(player_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
 	
+	stop_sweep_objects()
 	weapon_hitbox.monitoring = false
 	player_speed_current = 0
 	attack_combo_stage = 0
@@ -1118,8 +1152,28 @@ func die() -> void:
 	anim_tree.set("parameters/DeathFrontShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	current_oneshot_anim = "DeathFrontShot"
 
+func sweep_objects() -> void:
+	for enemy: Enemy in sweeping_objects:
+		enemy.swept_away = true
+		enemy.velocity += current_root_motion * enemy.root_motion_multiplier * 2.5
 
-### HELPER FUNCTIONS
+func stop_sweep_objects() -> void:
+	combat_sweep_area.monitoring = false
+	combat_sweep_shape.disabled = !combat_sweep_area.monitoring
+	for enemy: Enemy in sweeping_objects:
+		enemy.swept_away = false
+	sweeping_objects.clear()
+
+func _on_combat_sweep_area_body_entered(body: Node3D):
+	if body is Enemy: # can probably remove later since collision layers should already only be seeking enemies
+		sweeping_objects.append(body)
+
+func _on_combat_sweep_area_body_exited(body: Node3D):
+	if body is Enemy: # can probably remove later since collision layers should already only be seeking enemies
+		sweeping_objects.erase(body)
+		body.velocity = Vector3.ZERO
+
+#region HELPER FUNCTIONS
 func tween_val(object: Node, property: NodePath, final_val: Variant, duration: float, trans_type: Tween.TransitionType = Tween.TRANS_LINEAR, ease_type: Tween.EaseType = Tween.EASE_IN_OUT, parallel: bool = true):
 	var tween: Tween = get_tree().create_tween()
 	tween.stop()
@@ -1206,3 +1260,4 @@ func find_relative_direction(from: Vector3, to: Vector3) -> HitDirection:
 		return HitDirection.FRONT
 	else:
 		return HitDirection.MAX
+#endregion

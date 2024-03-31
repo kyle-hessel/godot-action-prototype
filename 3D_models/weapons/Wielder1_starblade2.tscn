@@ -34,7 +34,7 @@ surface_material_override/0 = SubResource("ShaderMaterial_2ls0y")
 
 [node name="HitboxArea" type="Area3D" parent="." index="1"]
 collision_layer = 4
-collision_mask = 4
+collision_mask = 2
 monitorable = false
 
 [node name="HitboxCollision" type="CollisionShape3D" parent="HitboxArea" index="0"]

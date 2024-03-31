@@ -23,7 +23,7 @@ var current_oneshot_anim: String
 @export var takedamage2_rootmotion_cutoff: float = 0.485
 @export var death_anim1_cutoff: float = 0.965
 var hit_received: bool = false
-var slide_away: bool = false
+var swept_away: bool = false
 var delta_cache: float
 var void_amount: float = 1.0
 var void_amount_max: float = 5.0
@@ -139,6 +139,11 @@ func _physics_process(delta: float) -> void:
 				velocity = Vector3(0.0, velocity.y, 0.0)
 			
 			move_and_slide()
+			
+			# reset velocity at the end if the enemy is being swept by the player since that uses root motion.
+			# just don't worry about gravity problems for now
+			if swept_away:
+				velocity = Vector3.ZERO
 
 
 func apply_only_gravity(delta: float) -> void:
@@ -237,27 +242,6 @@ func handle_attack_state(delta: float) -> void:
 
 
 func handle_guard_state(delta: float) -> void:
-	# if the enemy is touching the player from the front while the player is attacking, slide them using the same root motion vector as the player, but increased.
-	# this makes combat feel much better when colliding with enemies, but it still isn't perfect.
-	if nearby_cast.is_colliding():
-		var player: CharacterBody3D = nearby_cast.get_collider()
-		# an eight_directional version of find_relative_direction *might* be preferable here later.
-		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
-		#print(player_dir)
-		# currently only enable slide_away if the player is grounded. will revisit later; this should depend on if the enemy is already in midair or if they are an aerial enemy.
-		if player.movement_state == player.PlayerMovementState.ATTACK && player_dir == "front" && player.is_on_floor():
-			slide_away = true
-		else:
-			# I think this is fine, may help with edge cases
-			slide_away = false
-	
-	# slide away from the player using their velocity when the player is attacking.
-	if slide_away:
-		#print("slide")
-		# this line could break later with multiplayer
-		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
-		velocity += root_motion * root_motion_multiplier * 2.5
-		
 	if $GuardTimer.is_stopped():
 		start_guard_timer()
 			
@@ -266,9 +250,9 @@ func handle_guard_state(delta: float) -> void:
 	apply_only_gravity(delta)
 	move_and_slide()
 	
-	# reset velocity at the end since we're using root motion.
+	# reset velocity at the end if the enemy is being swept by the player since that uses root motion.
 	# just don't worry about gravity problems for now
-	if slide_away:
+	if swept_away:
 		velocity = Vector3.ZERO
 
 
@@ -287,7 +271,7 @@ func handle_damaged_state(delta: float) -> void:
 		if anim_progress > takedamage1_rootmotion_cutoff && !is_on_floor():
 			apply_only_gravity(delta)
 			reset_velocity = false
-			slide_away = false
+			swept_away = false
 		else:
 			handle_root_motion(delta, root_motion_multiplier * 0.9)
 			
@@ -297,26 +281,14 @@ func handle_damaged_state(delta: float) -> void:
 		if anim_progress > takedamage2_rootmotion_cutoff && !is_on_floor():
 			apply_only_gravity(delta)
 			reset_velocity = false
-			slide_away = false
+			swept_away = false
 		else:
 			# enemy's own root motion
 			handle_root_motion(delta, root_motion_multiplier * 0.9)
 	
-	if nearby_cast.is_colliding():
-		var player: CharacterBody3D = nearby_cast.get_collider()
-		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
-		if player_dir != "front":
-			slide_away = false
-	
-	# additionally, keep adding some of the player's root motion.
-	if slide_away:
-		#print("slide")
-		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
-		velocity += root_motion * root_motion_multiplier * 2.5
-		
 	move_and_slide()
 	
-	if reset_velocity:
+	if swept_away || reset_velocity:
 		# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
 		velocity = Vector3.ZERO
 
@@ -350,23 +322,13 @@ func handle_dead_state(delta: float) -> void:
 		# turn off ground collisions for sinking through floor.
 		set_collision_mask_value(1, false)
 		anim_tree.set("parameters/TimeScale/scale", 0.0)
-		slide_away = false
+		swept_away = false
 		
 	# move hit particles down towards feet.
 	hit_particles.global_position = hit_particles.global_position.move_toward(global_position, 1.0 * delta)
 		
 	# just add gravity in case of dying in midair
 	handle_root_motion(delta, root_motion_multiplier * 1.5)
-	
-	if nearby_cast.is_colliding():
-		var player: CharacterBody3D = nearby_cast.get_collider()
-		var player_dir: String = find_relative_direction($EnemyMesh.transform.basis.z * -1.0, player.player_mesh.transform.basis.z * -1.0)
-		if player_dir != "front":
-			slide_away = false
-	
-	if slide_away:
-		var root_motion: Vector3 = nearby_players[0].anim_tree.get_root_motion_position().rotated(Vector3.UP, nearby_players[0].player_mesh.rotation.y) / delta
-		velocity += root_motion * root_motion_multiplier * 2.0
 	
 	# all below could prolly be optimized
 	apply_only_gravity(delta)
@@ -434,7 +396,6 @@ func _on_guard_timer_timeout():
 
 # despawn this enemy once dead.
 func _on_delete_timer_timeout():
-	# doing these bits here instead of in die because slide_away relies on player data, which these lines clear out.
 	$OverlapArea.set_collision_layer_value(3, false)
 	$OverlapArea.set_collision_mask_value(3, false)
 	
@@ -496,16 +457,21 @@ func take_parry() -> void:
 
 
 func die() -> void:
+	$CollisionDisableTimer.timeout.connect(func():
+		set_collision_layer_value(2, false)
+		set_collision_mask_value(3, false)
+	)
+	
 	# disable most collisions so that the enemy can't detect the player and vice versa.
-	set_collision_layer_value(2, false)
-	set_collision_layer_value(3, false)
-	set_collision_mask_value(3, false)
+	#set_collision_layer_value(2, false)
+	#set_collision_mask_value(3, false)
+	$CollisionDisableTimer.start()
 	
 	movement_state = EnemyMovementState.DEAD
 	velocity = Vector3.ZERO
-	#slide_away = false
+	swept_away = false
 	targeted_player = null # unsure if necessary
-	nearby_cast.enabled = false
+	#nearby_cast.enabled = false
 	combat_cast.enabled = false
 	gravity_multiplier *= 0.25
 	hit_particles.amount = 50
@@ -533,7 +499,7 @@ func _on_animation_tree_animation_finished(anim_name):
 	elif movement_state == EnemyMovementState.DAMAGED:
 		if targeted_player != null:
 			if anim_name == "TakeDamage1" || anim_name == "TakeDamage2":
-				slide_away = false
+				swept_away = false
 				
 				var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
 				if to_player.length_squared() > guard_player_distance:
