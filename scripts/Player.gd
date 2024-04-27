@@ -1156,7 +1156,7 @@ func _on_vanish_timer_timeout() -> void:
 		blending_weapon_state = true
 #endregion
 
-#region HELPER FUNCTIONS
+#region Helper functions
 func tween_val(object: Node, property: NodePath, final_val: Variant, duration: float, trans_type: Tween.TransitionType = Tween.TRANS_LINEAR, ease_type: Tween.EaseType = Tween.EASE_IN_OUT, parallel: bool = true):
 	var tween: Tween = get_tree().create_tween()
 	tween.stop()
@@ -1232,7 +1232,6 @@ func face_object_lerp(obj: Node3D, target: Vector3, up: Vector3, delta: float) -
 func find_relative_direction(from: Vector3, to: Vector3) -> HitDirection:
 	var angle_diff: float = rad_to_deg(from.signed_angle_to(to, Vector3.UP))
 	#print("angle diff: ", angle_diff)
-							
 	if angle_diff < 45.0 && angle_diff >= -45.0:
 		return HitDirection.BACK
 	elif angle_diff < -45.0 && angle_diff >= -135.0:
