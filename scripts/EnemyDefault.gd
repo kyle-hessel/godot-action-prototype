@@ -140,10 +140,10 @@ func _physics_process(delta: float) -> void:
 			
 			move_and_slide()
 			
-			# reset velocity at the end if the enemy is being swept by the player since that uses root motion.
-			# just don't worry about gravity problems for now
-			if swept_away:
-				velocity = Vector3.ZERO
+		# reset velocity at the end if the enemy is being swept by the player since that uses root motion.
+		# just don't worry about gravity problems for now
+		if swept_away:
+			velocity = Vector3.ZERO
 
 
 func apply_only_gravity(delta: float) -> void:
@@ -249,11 +249,6 @@ func handle_guard_state(delta: float) -> void:
 	rotate_enemy_tracking(delta)
 	apply_only_gravity(delta)
 	move_and_slide()
-	
-	# reset velocity at the end if the enemy is being swept by the player since that uses root motion.
-	# just don't worry about gravity problems for now
-	if swept_away:
-		velocity = Vector3.ZERO
 
 
 func handle_damaged_state(delta: float) -> void:
@@ -271,7 +266,6 @@ func handle_damaged_state(delta: float) -> void:
 		if anim_progress > takedamage1_rootmotion_cutoff && !is_on_floor():
 			apply_only_gravity(delta)
 			reset_velocity = false
-			swept_away = false
 		else:
 			handle_root_motion(delta, root_motion_multiplier * 0.9)
 			
@@ -281,14 +275,13 @@ func handle_damaged_state(delta: float) -> void:
 		if anim_progress > takedamage2_rootmotion_cutoff && !is_on_floor():
 			apply_only_gravity(delta)
 			reset_velocity = false
-			swept_away = false
 		else:
 			# enemy's own root motion
 			handle_root_motion(delta, root_motion_multiplier * 0.9)
 	
 	move_and_slide()
 	
-	if swept_away || reset_velocity:
+	if reset_velocity:
 		# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
 		velocity = Vector3.ZERO
 
@@ -322,7 +315,6 @@ func handle_dead_state(delta: float) -> void:
 		# turn off ground collisions for sinking through floor.
 		set_collision_mask_value(1, false)
 		anim_tree.set("parameters/TimeScale/scale", 0.0)
-		swept_away = false
 		
 	# move hit particles down towards feet.
 	hit_particles.global_position = hit_particles.global_position.move_toward(global_position, 1.0 * delta)
