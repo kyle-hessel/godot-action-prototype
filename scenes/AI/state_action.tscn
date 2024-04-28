@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqdaf1gouvnbe"]
+
+[ext_resource type="Script" path="res://scripts/AI/state_action.gd" id="1_4mcok"]
+
+[node name="StateAction" type="Node"]
+script = ExtResource("1_4mcok")

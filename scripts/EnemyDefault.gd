@@ -87,7 +87,33 @@ func _ready() -> void:
 	combat_cast.enabled = false
 	combat_cast.add_exception($".") #'Exclude Parent' doesn't seem to work since combat_cast isn't a direct child of EnemyStarfiend, but instead its mesh.
 	nearby_cast.add_exception($".")
+	
+#### Sample State setup.
+	# a sample State setup that creates two StateActions using functions in this class, adds them to the State, and adds the State to us, starting the state machine.
+	# TODO: Turn this into an easier to use API.
+	var action_print_str: StateAction = StateAction.new(sample_action, ["Ayooooo.", " Bruh"])
+	var action_increment_int: StateAction = StateAction.new(sample_tick_action, [1], true)
+	var test_state: State = State.new(movement_state)
+	test_state.add_child(action_print_str)
+	test_state.add_child(action_increment_int)
+	add_child(test_state) # begins execution
 
+# a sample action that prints two strings put together.
+func sample_action(args: Array) -> void:
+	var str: String = args[0]
+	var str2: String = args[1]
+	print(str + str2)
+
+# a sample action that increments a number every (physics) tick until it reaches a certain value.
+var start: int = 5
+func sample_tick_action(args: Array, owning_action: StateAction) -> void:
+	start += args[0]
+	print(start)
+	
+	if start > 10:
+		start = 5
+		owning_action.emit_signal("action_complete")
+#### End sample State setup.
 
 # clear materials just as node is deleted to avoid debugger errors. see: https://github.com/godotengine/godot/issues/67144
 func _exit_tree():
@@ -98,55 +124,57 @@ func _exit_tree():
 func _physics_process(delta: float) -> void:
 	#print(velocity.length())
 	#print(is_on_floor())
+	apply_only_gravity(delta)
+	move_and_slide()
 	
-	# if dead, stay dead.
-	if movement_state == EnemyMovementState.DEAD:
-		handle_dead_state(delta)
-	# if not dead, do something.
-	else:
-		anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
-		# if there is a player, do something
-		if targeted_player != null:
-			# if we are tracking, follow the player.
-			if movement_state == EnemyMovementState.TRACK:
-				delta_cache = delta
-				# for whatever reason none of this logic works if abstracted into another function.
-				if !$GuardTimer.is_stopped():
-					$GuardTimer.stop()
-				
-				execute_nav(delta)
-				
-				# face the player smoothly
-				rotate_enemy_tracking(delta)
+	## if dead, stay dead.
+	#if movement_state == EnemyMovementState.DEAD:
+		#handle_dead_state(delta)
+	## if not dead, do something.
+	#else:
+		#anim_tree.set("parameters/IdleRunBlendspace/blend_position", velocity.length())
+		## if there is a player, do something
+		#if targeted_player != null:
+			## if we are tracking, follow the player.
+			#if movement_state == EnemyMovementState.TRACK:
+				#delta_cache = delta
+				## for whatever reason none of this logic works if abstracted into another function.
+				#if !$GuardTimer.is_stopped():
+					#$GuardTimer.stop()
+				#
+				##execute_nav(delta)
+				#
+				## face the player smoothly
+				#rotate_enemy_tracking(delta)
+			#
+			## if guarding, periodically check what the player is doing.
+			#elif movement_state == EnemyMovementState.GUARD:
+				#handle_guard_state(delta)
+			#
+			#elif movement_state == EnemyMovementState.ATTACK:
+				#handle_attack_state(delta)
+			#
+			## this state only being called when there is a targeted player could cause issues at distance if such a scenario occurs.
+			#elif movement_state == EnemyMovementState.DAMAGED:
+				#handle_damaged_state(delta)
+			#
+			##print(movement_state)
+		## if there's no player, just be still. (add roaming here later)
+		#else:
+			#movement_state = EnemyMovementState.IDLE
+			#apply_only_gravity(delta)
+			#
+			#if is_on_floor():
+				#velocity = Vector3.ZERO
+			#else:
+				#velocity = Vector3(0.0, velocity.y, 0.0)
 			
-			# if guarding, periodically check what the player is doing.
-			elif movement_state == EnemyMovementState.GUARD:
-				handle_guard_state(delta)
-			
-			elif movement_state == EnemyMovementState.ATTACK:
-				handle_attack_state(delta)
-			
-			# this state only being called when there is a targeted player could cause issues at distance if such a scenario occurs.
-			elif movement_state == EnemyMovementState.DAMAGED:
-				handle_damaged_state(delta)
-			
-			#print(movement_state)
-		# if there's no player, just be still. (add roaming here later)
-		else:
-			movement_state = EnemyMovementState.IDLE
-			apply_only_gravity(delta)
-			
-			if is_on_floor():
-				velocity = Vector3.ZERO
-			else:
-				velocity = Vector3(0.0, velocity.y, 0.0)
-			
-			move_and_slide()
+			#move_and_slide()
 			
 		# reset velocity at the end if the enemy is being swept by the player since that uses root motion.
 		# just don't worry about gravity problems for now
-		if swept_away:
-			velocity = Vector3.ZERO
+	if swept_away:
+		velocity = Vector3.ZERO
 #endregion
 
 #region Movement functions
