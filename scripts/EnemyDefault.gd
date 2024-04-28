@@ -2,6 +2,7 @@ extends Enemy
 
 class_name EnemyDefault
 
+#region Variable declarations
 @export var enemy_health_max: float = 20.0
 @export var enemy_health_current: float = enemy_health_max
 @export var enemy_normal_damage_stat: float = 3.0
@@ -75,7 +76,9 @@ enum DamageResult {
 
 var movement_state: EnemyMovementState = EnemyMovementState.IDLE
 @export var enemy_type: EnemyType # set per enemy type in editor
+#endregion
 
+#region Main functions
 func _ready() -> void:
 	enemy_mesh.get_surface_override_material(0).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
 	enemy_mesh.get_surface_override_material(1).get_next_pass().set_shader_parameter("VoidAmount", void_amount)
@@ -144,12 +147,12 @@ func _physics_process(delta: float) -> void:
 		# just don't worry about gravity problems for now
 		if swept_away:
 			velocity = Vector3.ZERO
+#endregion
 
-
+#region Movement functions
 func apply_only_gravity(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * gravity_multiplier * delta
-
 
 # navigates to a player, relying on target_pos (updated from update_nav_target_pos)
 func execute_nav(delta: float, avoidance: bool = true) -> void:
@@ -174,14 +177,49 @@ func execute_nav(delta: float, avoidance: bool = true) -> void:
 	
 	#print(nav_agent.is_target_reachable())
 
-
 # called by the level itself, as of now Level.gd. For TRACK mode only.
 func update_nav_target_pos(target_pos: Vector3) -> void:
 	# if tracking, move towards the player's position.
 	if movement_state == EnemyMovementState.TRACK:
 		nav_agent.set_target_position(target_pos)
 
+# determine how to move when applying root motion.
+func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
+	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
+	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
+	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y) / delta
+	
+	if lateral_only:
+		velocity.x += root_motion.x * rm_multiplier
+		velocity.z += root_motion.z * rm_multiplier
+	else:
+		# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
+		velocity += root_motion * rm_multiplier
+	
+	# still add gravity if not on floor
+	apply_only_gravity(delta)
 
+
+# when enemy gets within a set distance to the target (player), switch to guard state.
+func _on_navigation_agent_3d_target_reached():
+	if movement_state == EnemyMovementState.TRACK:
+		print("reached!")
+		movement_state = EnemyMovementState.GUARD
+		$NavigationAgent3D.avoidance_enabled = true
+		# change this to decel
+		velocity = Vector3.ZERO
+
+
+# final velocity when in track mode.
+func _on_navigation_agent_3d_velocity_computed(safe_velocity):
+	if is_on_floor():
+		# smoother velocity with move_toward, helps with corners, etc
+		velocity = velocity.move_toward(safe_velocity, enemy_decel_rate)
+		apply_only_gravity(delta_cache)
+		move_and_slide()
+#endregion
+
+#region Combat functions
 # starts guard timer, randomizing its exact wait time.
 func start_guard_timer() -> void:
 	rng.randomize()
@@ -189,14 +227,12 @@ func start_guard_timer() -> void:
 	$GuardTimer.wait_time = guard_time_rand
 	$GuardTimer.start()
 
-
 func begin_attack() -> void:
 	movement_state = EnemyMovementState.ATTACK
 	combat_cast.enabled = true
 	anim_tree.set("parameters/AttackShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	current_oneshot_anim = "AttackShot1"
 	$GuardTimer.stop()
-
 
 func handle_attack_state(delta: float) -> void:
 	# in attack state, drive velocity with root motion from anim.
@@ -240,7 +276,6 @@ func handle_attack_state(delta: float) -> void:
 						elif damage_result == DamageResult.PARRY:
 							print("Fuck!!")
 
-
 func handle_guard_state(delta: float) -> void:
 	if $GuardTimer.is_stopped():
 		start_guard_timer()
@@ -250,6 +285,15 @@ func handle_guard_state(delta: float) -> void:
 	apply_only_gravity(delta)
 	move_and_slide()
 
+func _on_guard_timer_timeout():
+	if targeted_player != null && movement_state != EnemyMovementState.DEAD:
+		# if the player gets too far away, resume tracking.
+		var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
+		if to_player.length_squared() > guard_player_distance:
+			movement_state = EnemyMovementState.TRACK
+		# if the player is in range, attack!
+		else:
+			begin_attack()
 
 func handle_damaged_state(delta: float) -> void:
 	if !$GuardTimer.is_stopped():
@@ -285,7 +329,55 @@ func handle_damaged_state(delta: float) -> void:
 		# reset velocity at end of each tick (after move_and_slide) so that it does not accumulate when using root motion.
 		velocity = Vector3.ZERO
 
+func rotate_enemy_tracking(delta: float) -> void:
+	face_object_lerp($EnemyMesh, targeted_player.position, Vector3.UP, delta)
+	# zero out X and Z rotations so that the enemy can't rotate in odd ways.
+	$EnemyMesh.rotation.x = 0.0
+	$EnemyMesh.rotation.z = 0.0
 
+func take_damage(amount: float, player_combo_stage: int) -> DamageResult:
+	# take damage.
+	enemy_health_current -= amount
+	enemy_health_current = clamp(enemy_health_current, 0.0, enemy_health_max)
+	
+	# cancel out any existing oneshot animation on the enemy if it exists.
+	# *** this if check will probably need to be modified.
+	if movement_state == EnemyMovementState.ATTACK:
+		var enemy_attack_anim: String = "parameters/" + current_oneshot_anim + "/request"
+		anim_tree.set(enemy_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+	
+	velocity = Vector3.ZERO
+	hit_particles.emitting = true # only have to set once, due to particles being a one-shot.
+	
+	# if enemy is dead, early out of this function and instead call die after damage is dealt.
+	if enemy_health_current == 0.0:
+		die()
+		return DamageResult.DEAD
+		
+	# switch enemy state to damaged.
+	movement_state = EnemyMovementState.DAMAGED
+	
+	# determine which hit animation enemy plays. move damage into this as well later so that it varies.
+	if player_combo_stage > 2:
+		anim_tree.set("parameters/TakeDamageShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+		current_oneshot_anim = "TakeDamageShot2"
+	else:
+		anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+		current_oneshot_anim = "TakeDamageShot1"
+	
+	print("Enemy hurt! health: ", enemy_health_current)
+	
+	# begin enemy's i-frames.
+	i_frames.wait_time = i_frames_in_sec
+	i_frames.start()
+	
+	return DamageResult.ALIVE
+
+func take_parry() -> void:
+	pass
+#endregion
+
+#region Death functions
 func handle_dead_state(delta: float) -> void:
 	# death particle/shader effects
 	if void_amount < void_amount_max:
@@ -331,61 +423,6 @@ func handle_dead_state(delta: float) -> void:
 	else:
 		velocity = Vector3(0.0, velocity.y, 0.0)
 
-
-func rotate_enemy_tracking(delta: float) -> void:
-	face_object_lerp($EnemyMesh, targeted_player.position, Vector3.UP, delta)
-	# zero out X and Z rotations so that the enemy can't rotate in odd ways.
-	$EnemyMesh.rotation.x = 0.0
-	$EnemyMesh.rotation.z = 0.0
-
-
-# determine how to move when applying root motion.
-func handle_root_motion(delta: float, rm_multiplier: float = root_motion_multiplier, lateral_only: bool = false) -> void:
-	var up_vector: Vector3 = Vector3(0.0, 1.0, 0.0)
-	# get the root motion position vector for the current frame, and rotate it to match the player's rotation.
-	var root_motion: Vector3 = anim_tree.get_root_motion_position().rotated(up_vector, $EnemyMesh.rotation.y) / delta
-	
-	if lateral_only:
-		velocity.x += root_motion.x * rm_multiplier
-		velocity.z += root_motion.z * rm_multiplier
-	else:
-		# apply root motion, and multiply it by an arbitrary value to get a speed that makes sense.
-		velocity += root_motion * rm_multiplier
-	
-	# still add gravity if not on floor
-	apply_only_gravity(delta)
-
-
-# when enemy gets within a set distance to the target (player), switch to guard state.
-func _on_navigation_agent_3d_target_reached():
-	if movement_state == EnemyMovementState.TRACK:
-		print("reached!")
-		movement_state = EnemyMovementState.GUARD
-		$NavigationAgent3D.avoidance_enabled = true
-		# change this to decel
-		velocity = Vector3.ZERO
-
-
-# final velocity when in track mode.
-func _on_navigation_agent_3d_velocity_computed(safe_velocity):
-	if is_on_floor():
-		# smoother velocity with move_toward, helps with corners, etc
-		velocity = velocity.move_toward(safe_velocity, enemy_decel_rate)
-		apply_only_gravity(delta_cache)
-		move_and_slide()
-
-
-func _on_guard_timer_timeout():
-	if targeted_player != null && movement_state != EnemyMovementState.DEAD:
-		# if the player gets too far away, resume tracking.
-		var to_player: Vector3 = targeted_player.global_position - $EnemyMesh.global_position
-		if to_player.length_squared() > guard_player_distance:
-			movement_state = EnemyMovementState.TRACK
-		# if the player is in range, attack!
-		else:
-			begin_attack()
-
-
 # despawn this enemy once dead.
 func _on_delete_timer_timeout():
 	$OverlapArea.set_collision_layer_value(3, false)
@@ -396,57 +433,6 @@ func _on_delete_timer_timeout():
 	
 	print("goobye!")
 	call_deferred("queue_free")
-
-
-# finds a randomized position in a given circumference around a target. does not check if said position is valid on terrain.
-func find_random_pos_around_target(radius: float = 3.0, target_pos: Vector3 = targeted_player.global_position) -> Vector3:
-	rng.randomize()
-	var random_angle: float = rng.randf_range(-180.0, 180.0)
-	return target_pos + target_pos.normalized().rotated(Vector3.UP, deg_to_rad(random_angle)) * radius
-
-
-func take_damage(amount: float, player_combo_stage: int) -> DamageResult:
-	# take damage.
-	enemy_health_current -= amount
-	enemy_health_current = clamp(enemy_health_current, 0.0, enemy_health_max)
-	
-	# cancel out any existing oneshot animation on the enemy if it exists.
-	# *** this if check will probably need to be modified.
-	if movement_state == EnemyMovementState.ATTACK:
-		var enemy_attack_anim: String = "parameters/" + current_oneshot_anim + "/request"
-		anim_tree.set(enemy_attack_anim, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
-	
-	velocity = Vector3.ZERO
-	hit_particles.emitting = true # only have to set once, due to particles being a one-shot.
-	
-	# if enemy is dead, early out of this function and instead call die after damage is dealt.
-	if enemy_health_current == 0.0:
-		die()
-		return DamageResult.DEAD
-		
-	# switch enemy state to damaged.
-	movement_state = EnemyMovementState.DAMAGED
-	
-	# determine which hit animation enemy plays. move damage into this as well later so that it varies.
-	if player_combo_stage > 2:
-		anim_tree.set("parameters/TakeDamageShot2/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		current_oneshot_anim = "TakeDamageShot2"
-	else:
-		anim_tree.set("parameters/TakeDamageShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		current_oneshot_anim = "TakeDamageShot1"
-	
-	print("Enemy hurt! health: ", enemy_health_current)
-	
-	# begin enemy's i-frames.
-	i_frames.wait_time = i_frames_in_sec
-	i_frames.start()
-	
-	return DamageResult.ALIVE
-
-
-func take_parry() -> void:
-	pass
-
 
 func die() -> void:
 	$CollisionDisableTimer.timeout.connect(func():
@@ -471,8 +457,9 @@ func die() -> void:
 	
 	anim_tree.set("parameters/DieShot1/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	current_oneshot_anim = "DieShot1"
+#endregion
 
-
+#region Animation functions
 func _on_animation_tree_animation_finished(anim_name):
 	# if finishing attack animation, resume TRACK state.
 	if movement_state == EnemyMovementState.ATTACK:
@@ -500,8 +487,9 @@ func _on_animation_tree_animation_finished(anim_name):
 					movement_state = EnemyMovementState.GUARD
 		else:
 			movement_state = EnemyMovementState.IDLE
+#endregion
 
-
+#region Overlap functions
 func _on_overlap_area_body_entered(body: Node3D):
 	if body is Player:
 		if nearby_players.is_empty():
@@ -535,9 +523,9 @@ func _on_overlap_area_body_exited(body: Node3D):
 		nearby_allies.erase(body)
 		combat_cast.remove_exception(body)
 		nearby_cast.remove_exception(body)
+#endregion
 
-
-### HELPER FUNCTIONS
+#region Helper functions
 func tween_val(object: Node, property: NodePath, final_val: Variant, duration: float, trans_type: Tween.TransitionType = Tween.TRANS_LINEAR, ease_type: Tween.EaseType = Tween.EASE_IN_OUT, parallel: bool = true):
 	var tween: Tween = get_tree().create_tween()
 	tween.stop()
@@ -546,7 +534,13 @@ func tween_val(object: Node, property: NodePath, final_val: Variant, duration: f
 	tween.set_parallel(parallel)
 	tween.tween_property(object, property, final_val, duration)
 	tween.play()
-	
+
+# finds a randomized position in a given circumference around a target. does not check if said position is valid on terrain.
+func find_random_pos_around_target(radius: float = 3.0, target_pos: Vector3 = targeted_player.global_position) -> Vector3:
+	rng.randomize()
+	var random_angle: float = rng.randf_range(-180.0, 180.0)
+	return target_pos + target_pos.normalized().rotated(Vector3.UP, deg_to_rad(random_angle)) * radius
+
 # for meshes, such as player (minor modification of looking_at)
 func facing_object(target: Vector3, up: Vector3)-> Basis:
 	var v_z: Vector3 = target.normalized()
@@ -610,3 +604,4 @@ func find_relative_direction_eightway(from: Vector3, to: Vector3) -> String:
 		return "front-right"
 	else:
 		return "?"
+#endregion
