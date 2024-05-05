@@ -93,9 +93,8 @@ func _ready() -> void:
 	# TODO: Turn this into an easier to use API.
 	var action_print_str: StateAction = StateAction.new(sample_action, ["Ayooooo.", " Bruh"])
 	var action_increment_int: StateAction = StateAction.new(sample_tick_action, [1], true)
-	var test_state: State = State.new(movement_state)
-	test_state.add_child(action_print_str)
-	test_state.add_child(action_increment_int)
+	var actions_arr: Array[StateAction] = [action_print_str, action_increment_int]
+	var test_state: State = State.new(movement_state, actions_arr)
 	add_child(test_state) # begins execution
 
 # a sample action that prints two strings put together.
@@ -119,7 +118,6 @@ func sample_tick_action(args: Array, owning_action: StateAction) -> void:
 func _exit_tree():
 	enemy_mesh.set("surface_material_override/0", null)
 	enemy_mesh.set("surface_material_override/1", null)
-
 
 func _physics_process(delta: float) -> void:
 	#print(velocity.length())

@@ -6,23 +6,21 @@ var state_type: int = 0 # pass in enums to this
 var state_actions: Array[StateAction]
 var state_tickable_actions: Array[StateAction]
 var trans_rule: Callable
+var trans: Callable
 var pos: int = 0
 
+signal consider_trans
 signal actions_complete
 
-func _init(_type: int) -> void:
+func _init(_type: int, _actions: Array[StateAction], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
 	state_type = _type # this is for classification used in the owning StateGraph.
+	state_actions = _actions
+	trans_rule = _trans_rule
+	trans = _trans
+	for action: StateAction in state_actions:
+		add_child(action)
 
 func _ready() -> void:
-	for action: StateAction in get_children():
-		state_actions.append(action)
-	
-	# set the function that the trans_rule Callable will call back to.
-	# NOTE: this would probably be a passed in argument from a CharacterBody3D for instance, not a local function.
-	trans_rule = _enter_trans_rule_test
-	# set the transition rule to fire when all actions are complete, to decide if this state is continued or not.
-	actions_complete.connect(trans_rule)
-	
 	# call the first action in line to begin the execution chain.
 	call_action()
 
@@ -38,13 +36,31 @@ func determine_next_action() -> void:
 	# increment pos so that the next action is executed below when this lambda function calls call_action again.
 	pos += 1
 	
-	# once all actions are complete, emit that information so that the StateGraph can continue.
+	# once all actions are complete, determine if a transition is in order.
 	if pos >= state_actions.size():
-		emit_signal("actions_complete")
+		consider_transition()
 	# otherwise, run call_action again to trigger the next action.
 	else:
 		call_action()
 
-# sample transition. might not necessarily live here.
-func _enter_trans_rule_test():
+func consider_transition() -> void:
+	var trans_rule_result: bool = trans_rule.call()
+	
+	# if the transition rule returned true, run the transition itself, which is the end of this state and handoff to the next state.
+	if trans_rule_result == true:
+		trans.call()
+	# if the transition rule returned false, loop the current state over again.
+	else:
+		pos = 0
+		call_action()
+
+# sample transition rule test. always returns true to transition out of the current state.
+func _trans_rule_test() -> bool:
+	print("Transition rule!")
+	return true
+
+# NOTE: Might want to add separate transition args that can optionally be passed in on initialization after the transition Callable itself.
+# sample transition test. always queue_frees the node.
+func _trans_test() -> void:
 	print("Transition!")
+	queue_free()
