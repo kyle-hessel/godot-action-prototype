@@ -4,19 +4,16 @@ class_name State
 
 var state_type: int = 0 # pass in enums to this
 var state_actions: Array[StateAction]
-var state_tickable_actions: Array[StateAction]
 var trans_rule: Callable
 var trans: Callable
 var pos: int = 0
-
-signal consider_trans
-signal actions_complete
 
 func _init(_type: int, _actions: Array[StateAction], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
 	state_type = _type # this is for classification used in the owning StateGraph.
 	state_actions = _actions
 	trans_rule = _trans_rule
 	trans = _trans
+	# add all StateActions as child nodes of this State node. this ensures their own code, including possible ticking, can run.
 	for action: StateAction in state_actions:
 		add_child(action)
 
@@ -25,7 +22,7 @@ func _ready() -> void:
 	call_action()
 
 func call_action() -> void:
-	# set up a lambda callback for the given action's action_complete signal to handle the action ending.
+	# set up a callback for the given action's action_complete signal to handle the action ending.
 	state_actions[pos].action_complete.connect(determine_next_action, CONNECT_ONE_SHOT)
 	
 	state_actions[pos].execute_action()
@@ -44,6 +41,7 @@ func determine_next_action() -> void:
 		call_action()
 
 func consider_transition() -> void:
+	# call the transition rule Callable and store its result.
 	var trans_rule_result: bool = trans_rule.call()
 	
 	# if the transition rule returned true, run the transition itself, which is the end of this state and handoff to the next state.

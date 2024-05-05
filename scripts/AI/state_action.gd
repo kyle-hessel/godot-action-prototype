@@ -16,7 +16,10 @@ func _init(_action: Callable, _args: Array = [], _tick: bool = false) -> void:
 
 func _ready() -> void:
 	if tickable:
-		action = action.bind(self) # bind an extra reference to this StateAction to its callable, so that the action_complete signal can be emitted from ticking actions.
+		# bind an extra reference to this StateAction to its callable, so that the action_complete signal can be emitted from ticking actions.
+		# NOTE: This is chosen over a return-type approach as every tickable action Callable would have to return true or false every single frame otherwise.
+		# this has a larger up-front cost, but I think it's a better API.
+		action = action.bind(self)
 
 func _physics_process(delta: float) -> void:
 	if tick:
@@ -30,6 +33,4 @@ func execute_action() -> void:
 	# for one-shot actions, just call them and then report back when the action is complete.
 	else:
 		action.call(action_args)
-		#print(action.get_method())
-		#print(action.is_valid())
 		emit_signal("action_complete")
