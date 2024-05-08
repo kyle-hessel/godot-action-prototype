@@ -3,10 +3,10 @@ extends StateBase
 class_name StateMachine
 
 # NOTE: exports will trigger *after* _init: see https://docs.godotengine.org/en/stable/tutorials/best_practices/godot_notifications.html#init-vs-initialization-vs-export
-@export var states: Array[State] = []
+@export var states: Array[StateBase] = []
 
 # If the StateMachine's variables are not initialized with exports, then they will be initialized in init() instead, such as when being created at runtime.
-func _init(_states: Array[State], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
+func _init(_states: Array[StateBase], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
 	states = _states
 	trans_rule = _trans_rule
 	trans = _trans

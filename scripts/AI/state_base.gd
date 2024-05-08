@@ -33,6 +33,7 @@ var trans_rule: Callable
 var trans: Callable
 var trans_rule_result: bool
 
+# represents the currently active State (anything derived from StateBase).
 var pos: int = 0
 
 signal state_complete
