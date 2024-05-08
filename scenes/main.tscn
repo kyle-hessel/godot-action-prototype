@@ -30,7 +30,6 @@ tonemap_white = 0.47
 ssr_enabled = true
 ssao_enabled = true
 ssil_enabled = true
-sdfgi_enabled = true
 sdfgi_use_occlusion = true
 sdfgi_energy = 0.6
 

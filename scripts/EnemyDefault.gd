@@ -95,7 +95,8 @@ func _ready() -> void:
 	var action_increment_int: StateAction = StateAction.new(sample_tick_action, [1], true)
 	var actions_arr: Array[StateAction] = [action_print_str, action_increment_int]
 	var test_state: State = State.new(movement_state, actions_arr)
-	add_child(test_state) # begins execution
+	var test_state_machine: StateMachine = StateMachine.new([test_state])
+	add_child(test_state_machine) # begins execution
 
 # a sample action that prints two strings put together.
 func sample_action(args: Array) -> void:

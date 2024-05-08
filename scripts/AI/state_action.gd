@@ -2,9 +2,25 @@ extends Node
 
 class_name StateAction
 
+#region error handling for exports used in Callable initialization.
+# NOTE: exports will trigger *after* _init: see https://docs.godotengine.org/en/stable/tutorials/best_practices/godot_notifications.html#init-vs-initialization-vs-export
+@export var action_data: Array = []:
+	set(_ad):
+		if not _ad[0] is NodePath:
+			print("Error: " + str(Error.ERR_INVALID_PARAMETER) + ". Array pos 0 is not of type NodePath.")
+			get_tree().quit(Error.ERR_INVALID_PARAMETER)
+		if not _ad[1] is StringName:
+			print("Error: " + str(Error.ERR_INVALID_PARAMETER) + ". Array pos 1 is not of type StringName.")
+			get_tree().quit(Error.ERR_INVALID_PARAMETER)
+		action_data = _ad
+	get:
+		return action_data
+#endregion
+
+@export var action_args: Array
+@export var tickable: bool = false
+
 var action: Callable
-var action_args: Array
-var tickable: bool = false
 var tick: bool = tickable
 
 signal action_complete
