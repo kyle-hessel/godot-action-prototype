@@ -13,8 +13,6 @@ class_name StateBase
 			print("Error: " + str(Error.ERR_INVALID_PARAMETER) + ". Array pos 1 is not of type StringName.")
 			get_tree().quit(Error.ERR_INVALID_PARAMETER)
 		trans_rule_data = _trd
-	get:
-		return trans_rule_data
 
 @export var trans_data: Array = []:
 	set(_td):
@@ -25,8 +23,6 @@ class_name StateBase
 			print("Error: " + str(Error.ERR_INVALID_PARAMETER) + ". Array pos 1 is not of type StringName.")
 			return
 		trans_data = _td
-	get:
-		return trans_data
 #endregion
 
 var trans_rule: Callable

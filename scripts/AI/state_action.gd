@@ -13,8 +13,6 @@ class_name StateAction
 			print("Error: " + str(Error.ERR_INVALID_PARAMETER) + ". Array pos 1 is not of type StringName.")
 			get_tree().quit(Error.ERR_INVALID_PARAMETER)
 		action_data = _ad
-	get:
-		return action_data
 #endregion
 
 @export var action_args: Array
