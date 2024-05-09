@@ -31,6 +31,7 @@ var trans_rule_result: bool
 
 # represents the currently active State (anything derived from StateBase).
 var pos: int = 0
+var new_pos: int = 0
 
 signal state_complete
 
@@ -40,7 +41,10 @@ func consider_transition() -> void:
 	
 	# if the transition rule returned true, run the transition itself, which is the end of this state and handoff to the next state.
 	if trans_rule_result == true:
-		trans.call()
+		# transitions should always return an int to indicate which State or StateAction to initiate next.
+		# this opens the door for modifiers to state_action execution order, too.
+		# we use new_pos instead of pos to let the child override determine if it will use this value or not.
+		new_pos = trans.call()
 		emit_signal("state_complete")
 	# if the transition rule returned false, loop the current state over again.
 	else:
@@ -53,10 +57,10 @@ func _trans_rule_test() -> bool:
 	return true
 
 # NOTE: Might want to add separate transition args that can optionally be passed in on initialization after the transition Callable itself.
-# sample transition test. always queue_frees the node.
-func _trans_test() -> void:
+# sample transition test. always returns 0 to reset to default state.
+func _trans_test() -> int:
 	print("Transition!")
-	queue_free()
+	return 0
 
 # a function meant to be overriden by State and StateMachine.
 func execute_state_context() -> void:

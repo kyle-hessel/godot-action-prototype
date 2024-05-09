@@ -6,7 +6,7 @@ class_name StateMachine
 @export var states: Array[StateBase] = []:
 	set(_s):
 		states = _s
-		# TODO: Consider adding runtime checks in the event that States are generated and added during runtime.
+		# TODO: Consider adding runtime checks in the event that States are generated and added during runtime at arbitrary points.
 		# Not sure what these would look like. It may make sense to pass in an array of Callables to init for this as one more
 		# optional parameter, and each can be checked before assigning the variable to assume it makes sense to add the State.
 		# e.g. Don't add a new State to the enemy if they are dead. Simple! With good transition writing though,
@@ -36,8 +36,16 @@ func execute_state_context() -> void:
 	states[pos].execute_state_context()
 
 func consider_transition() -> void:
+	#FIXME: wrong place to do this, do it in the function above.
+	# sync the temporary new_pos with pos before changing it again.
+	new_pos = pos
 	print("State machine: after state is ran")
 	super()
+	# and sync the opposite way after the fact. if new_pos changed, so will pos. otherwise, pos will stay the same.
+	pos = new_pos
+	
+	# run the next state, whether that's another or the same one again.
+	execute_state_context()
 	
 	# TODO: Decide if any overriden functionality is needed on top of the base consider_transition, such as manipulation
 	# of pos to determine which state runs next. this may not be necessary; it could be handled in the transition Callable itself.

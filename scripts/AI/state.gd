@@ -43,4 +43,8 @@ func consider_transition() -> void:
 		super()
 	# otherwise, run call_action again to trigger the next action.
 	else:
+		# TODO: consider modifying pos in some way here with new_pos; e.g. an NPC becomes erratic, and its behaviors grow unpredictable.
+		# this could be done at the StateMachine level instead on States (and will be) but it could be fun to dynamically alter existing
+		# states on the fly for more granular control and less state explosion.
+		
 		execute_state_context()
