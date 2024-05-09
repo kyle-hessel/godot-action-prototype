@@ -274,15 +274,6 @@ material = SubResource("StandardMaterial3D_kyei4")
 [node name="EnemyStarfiend" parent="Enemies" instance=ExtResource("6_af7ak")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.3469, 14.1866, 2.65404)
 
-[node name="EnemyStarfiend2" parent="Enemies" instance=ExtResource("6_af7ak")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.3052, 14.4908, -0.508535)
-
-[node name="EnemyStarfiend3" parent="Enemies" instance=ExtResource("6_af7ak")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.2615, 14.1866, 5.89291)
-
-[node name="EnemyStarfiend4" parent="Enemies" instance=ExtResource("6_af7ak")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.757944, 26.761, 14.9429)
-
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.13082, 15.8552, -22.4127)
 sorting_offset = 102.0

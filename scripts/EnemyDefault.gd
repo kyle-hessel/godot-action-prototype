@@ -94,8 +94,12 @@ func _ready() -> void:
 	var action_print_str: StateAction = StateAction.new(sample_action, ["Ayooooo.", " Bruh"])
 	var action_increment_int: StateAction = StateAction.new(sample_tick_action, [1], true)
 	var actions_arr: Array[StateAction] = [action_print_str, action_increment_int]
-	var test_state: State = State.new(movement_state, actions_arr)
-	var test_state_machine: StateMachine = StateMachine.new([test_state])
+	var test_state: State = State.new(movement_state, actions_arr, test_to_death_rule, test_to_death_trans)
+	
+	var death_action: StateAction = StateAction.new(death_action)
+	var death_state: State = State.new(EnemyMovementState.DEAD, [death_action], death_rule, death_trans)
+	
+	var test_state_machine: StateMachine = StateMachine.new([test_state, death_state])
 	add_child(test_state_machine) # begins execution
 
 # a sample action that prints two strings put together.
@@ -113,6 +117,26 @@ func sample_tick_action(args: Array, owning_action: StateAction) -> void:
 	if start > 10:
 		start = 5
 		owning_action.emit_signal("action_complete")
+
+func test_to_death_rule() -> bool:
+	print("Test to Death rule!")
+	return true
+
+func test_to_death_trans() -> int:
+	print("Test to Death trans!")
+	return 1
+
+func death_rule() -> bool:
+	print("Death to end rule!")
+	return true
+
+func death_trans() -> int:
+	print("Death to queue_free")
+	return -1
+
+func death_action(args: Array) -> void:
+	print("death!!!")
+
 #### End sample State setup.
 
 # clear materials just as node is deleted to avoid debugger errors. see: https://github.com/godotengine/godot/issues/67144

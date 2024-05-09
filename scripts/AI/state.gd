@@ -8,6 +8,7 @@ class_name State
 
 # If the State's variables are not initialized with exports, then they will be initialized in init() instead, such as when being created at runtime.
 func _init(_type: int, _actions: Array[StateAction], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
+	print("state init!")
 	state_type = _type # this is for classification used in the owning StateGraph.
 	state_actions = _actions
 	trans_rule = _trans_rule
@@ -28,23 +29,22 @@ func _ready() -> void:
 # NOTE: State's execute_state_context executes an action.
 func execute_state_context() -> void:
 	# set up a callback for the given action's action_complete signal to handle the action ending.
-	state_actions[pos].action_complete.connect(consider_transition, CONNECT_ONE_SHOT)
-	
+	if !state_actions[pos].action_complete.is_connected(consider_transition):
+		state_actions[pos].action_complete.connect(consider_transition, CONNECT_ONE_SHOT)
+	print("state executes action.")
 	state_actions[pos].execute_action()
 
 func consider_transition() -> void:
+	print("action completes - state considers transition.")
 	# set tick to false every time to either turn it off on a ticking action or, basically do nothing on anything else.
 	state_actions[pos].tick = false
 	# increment pos so that the next action is executed below when this lambda function calls call_action again.
 	pos += 1
+	print("position is incremented.")
 	
 	# once all actions are complete, determine if a transition is in order by calling the super of this function.
 	if pos >= state_actions.size():
 		super()
 	# otherwise, run call_action again to trigger the next action.
 	else:
-		# TODO: consider modifying pos in some way here with new_pos; e.g. an NPC becomes erratic, and its behaviors grow unpredictable.
-		# this could be done at the StateMachine level instead on States (and will be) but it could be fun to dynamically alter existing
-		# states on the fly for more granular control and less state explosion.
-		
 		execute_state_context()

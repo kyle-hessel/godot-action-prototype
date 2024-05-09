@@ -37,6 +37,7 @@ signal state_complete
 
 func consider_transition() -> void:
 	# call the transition rule Callable and store its result.
+	print("trans rule is called.")
 	trans_rule_result = trans_rule.call()
 	
 	# if the transition rule returned true, run the transition itself, which is the end of this state and handoff to the next state.
@@ -44,14 +45,16 @@ func consider_transition() -> void:
 		# transitions should always return an int to indicate which State or StateAction to initiate next.
 		# this opens the door for modifiers to state_action execution order, too.
 		# we use new_pos instead of pos to let the child override determine if it will use this value or not.
-		new_pos = trans.call()
+		print("trans is called.")
+		pos = trans.call()
 		emit_signal("state_complete")
 	# if the transition rule returned false, loop the current state over again.
+	# NOTE: If a transition is always guaranteed to return false, this creates an endless loop.
 	else:
 		pos = 0
 		execute_state_context()
 
-# sample transition rule test. always returns true to transition out of the current state.
+# sample transition rule test. always returns true to advance to trans_test, which halts execution.
 func _trans_rule_test() -> bool:
 	print("Transition rule!")
 	return true
@@ -60,7 +63,7 @@ func _trans_rule_test() -> bool:
 # sample transition test. always returns 0 to reset to default state.
 func _trans_test() -> int:
 	print("Transition!")
-	return 0
+	return -1
 
 # a function meant to be overriden by State and StateMachine.
 func execute_state_context() -> void:
