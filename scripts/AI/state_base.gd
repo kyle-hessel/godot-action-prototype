@@ -25,13 +25,18 @@ class_name StateBase
 		trans_data = _td
 #endregion
 
+enum ReservedTransitions {
+	FIRST = 0, # FIXME: can this can still be used in user-defined state enums as well?
+	STOP = -1,
+	BREAKOUT = -2,
+}
+
 var trans_rule: Callable
 var trans: Callable
 var trans_rule_result: bool
 
 # represents the currently active State (anything derived from StateBase).
 var pos: int = 0
-var new_pos: int = 0
 
 signal state_complete
 
@@ -43,15 +48,14 @@ func consider_transition() -> void:
 	# if the transition rule returned true, run the transition itself, which is the end of this state and handoff to the next state.
 	if trans_rule_result == true:
 		# transitions should always return an int to indicate which State or StateAction to initiate next.
-		# this opens the door for modifiers to state_action execution order, too.
-		# we use new_pos instead of pos to let the child override determine if it will use this value or not.
+		# this opens the door for modifiers to state_action execution order, too..
 		print("trans is called.")
 		pos = trans.call()
 		emit_signal("state_complete")
 	# if the transition rule returned false, loop the current state over again.
 	# NOTE: If a transition is always guaranteed to return false, this creates an endless loop.
 	else:
-		pos = 0
+		realign_pos()
 		execute_state_context()
 
 # sample transition rule test. always returns true to advance to trans_test, which halts execution.
@@ -63,8 +67,12 @@ func _trans_rule_test() -> bool:
 # sample transition test. always returns 0 to reset to default state.
 func _trans_test() -> int:
 	print("Transition!")
-	return -1
+	return ReservedTransitions.STOP
 
 # a function meant to be overriden by State and StateMachine.
 func execute_state_context() -> void:
+	pass
+
+# a function meant to be overriden by State and StateMachine.
+func realign_pos() -> void:
 	pass

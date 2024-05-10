@@ -2,8 +2,10 @@ extends StateBase
 
 class_name StateMachine
 
+var old_pos: int
+
 # NOTE: exports will trigger *after* _init: see https://docs.godotengine.org/en/stable/tutorials/best_practices/godot_notifications.html#init-vs-initialization-vs-export
-@export var states: Array[State] = []:
+@export var states: Array[StateBase] = []:
 	set(_s):
 		states = _s
 		# TODO: Consider adding runtime checks in the event that States are generated and added during runtime at arbitrary points.
@@ -12,18 +14,17 @@ class_name StateMachine
 		# e.g. Don't add a new State to the enemy if they are dead. Simple! With good transition writing though,
 		# this may be entirely unnecessary. 
 
-var current_state: State
+var current_state: StateBase
 var del_on_end: bool = false
 
 # If the StateMachine's variables are not initialized with exports, then they will be initialized in init() instead, such as when being created at runtime.
-func _init(_states: Array[State], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test, _del: bool = false) -> void:
-	print("state machine init!")
+func _init(_states: Array[StateBase], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test, _del: bool = false) -> void:
 	states = _states
 	trans_rule = _trans_rule
 	trans = _trans
 	del_on_end = _del
 	# add all StateActions as child nodes of this State node. this ensures their own code, including possible ticking, can run.
-	for state: State in states:
+	for state: StateBase in states:
 		add_child(state)
 
 func _ready() -> void:
@@ -32,9 +33,11 @@ func _ready() -> void:
 	if !trans_data.is_empty():
 		trans = Callable(get_node(trans_data[0]), trans_data[1])
 	
-	print("state machine calls state.")
-	# call the first action in line to begin the execution chain.
-	execute_state_context()
+	# call the first action in line to begin the execution chain on the root StateMachine.
+	# if this is a child StateMachine, let it stay dormant for the time being.
+	if not get_parent() is StateMachine:
+		print("state machine calls state.")
+		execute_state_context()
 
 # NOTE: StateMachine's execute_state_context executes a state.
 func execute_state_context() -> void:
@@ -44,19 +47,30 @@ func execute_state_context() -> void:
 	current_state.execute_state_context()
 
 func switch_state() -> void:
+	old_pos = pos # cache the old pos in the event that a StateAction tries to exit out of this State Machine and fails (see below in elif pos>99).
 	pos = current_state.pos
 	
-	# if the State's pos is -1, halt execution. if del_on_end was marked as true, delete StateMachine entirely.
-	if pos == -1:
+	# if the State's pos is -1, halt execution. if del_on_end was marked as true, delete the StateMachine entirely.
+	if pos == ReservedTransitions.STOP:
+		# TODO: If this StateMachine is a child in a larger HSM, gracefully have it transition out of itself *before* it gets deleted, OR delete the rest of the HSM, too.
 		if del_on_end:
 			queue_free()
 		# otherwise, wait.
 		else:
 			pass
+	# if pos is -2, trigger StateMachine's consider_transition.
+	elif pos == ReservedTransitions.BREAKOUT:
+		if get_parent() is StateMachine:
+			consider_transition()
+		# for now, just halt StateMachine execution if there's no parent StateMachine, as this is unintended behavior.
+		else:
+			print("Error! This StateMachine is the root of the HSM, it cannot be exited.")
+	# otherwise, continue with the next State.
 	else:
 		execute_state_context()
 
-# TODO: Rewrite. Should only be triggered if the StateMachine has a parent StateMachine in get_parent,
-# meaning that it is a state itself.
 func consider_transition() -> void:
 	super()
+	
+#func realign_pos() -> void:
+	#pass

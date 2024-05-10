@@ -4,3 +4,5 @@
 
 [node name="StateMachine" type="Node"]
 script = ExtResource("1_vdkgy")
+trans_rule_data = null
+trans_data = null

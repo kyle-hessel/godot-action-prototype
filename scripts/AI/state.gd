@@ -8,7 +8,6 @@ class_name State
 
 # If the State's variables are not initialized with exports, then they will be initialized in init() instead, such as when being created at runtime.
 func _init(_type: int, _actions: Array[StateAction], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
-	print("state init!")
 	state_type = _type # this is for classification used in the owning StateGraph.
 	state_actions = _actions
 	trans_rule = _trans_rule
@@ -38,9 +37,9 @@ func consider_transition() -> void:
 	print("action completes - state considers transition.")
 	# set tick to false every time to either turn it off on a ticking action or, basically do nothing on anything else.
 	state_actions[pos].tick = false
-	# increment pos so that the next action is executed below when this lambda function calls call_action again.
+	# increment pos so that the next action is called next time execute_state_context runs.
 	pos += 1
-	print("position is incremented.")
+	#print("position is incremented.")
 	
 	# once all actions are complete, determine if a transition is in order by calling the super of this function.
 	if pos >= state_actions.size():
@@ -48,3 +47,6 @@ func consider_transition() -> void:
 	# otherwise, run call_action again to trigger the next action.
 	else:
 		execute_state_context()
+
+func realign_pos() -> void:
+	pos = ReservedTransitions.FIRST
