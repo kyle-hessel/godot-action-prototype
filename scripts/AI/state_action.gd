@@ -23,12 +23,15 @@ var tick: bool = tickable
 
 signal action_complete
 
-func _init(_action: Callable, _args: Array = [], _tick: bool = false) -> void:
+func _init(_action: Callable = Callable(), _args: Array = [], _tick: bool = false) -> void:
 	action = _action
 	action_args = _args
 	tickable = _tick
 
 func _ready() -> void:
+	if !action_data.is_empty():
+		action = Callable(get_node(action_data[0]), action_data[1])
+	
 	if tickable:
 		# bind an extra reference to this StateAction to its callable, so that the action_complete signal can be emitted from ticking actions.
 		# NOTE: This is chosen over a return-type approach as every tickable action Callable would have to return true or false every single frame otherwise.

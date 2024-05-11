@@ -18,7 +18,7 @@ var current_state: StateBase
 var del_on_end: bool = false
 
 # If the StateMachine's variables are not initialized with exports, then they will be initialized in init() instead, such as when being created at runtime.
-func _init(_states: Array[StateBase], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test, _del: bool = false) -> void:
+func _init(_states: Array[StateBase] = [], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test, _del: bool = false) -> void:
 	states = _states
 	trans_rule = _trans_rule
 	trans = _trans
@@ -28,10 +28,7 @@ func _init(_states: Array[StateBase], _trans_rule: Callable = _trans_rule_test, 
 		add_child(state)
 
 func _ready() -> void:
-	if !trans_rule_data.is_empty():
-		trans_rule = Callable(get_node(trans_rule_data[0]), trans_rule_data[1])
-	if !trans_data.is_empty():
-		trans = Callable(get_node(trans_data[0]), trans_data[1])
+	super()
 	
 	# call the first action in line to begin the execution chain on the root StateMachine.
 	# if this is a child StateMachine, let it stay dormant for the time being.

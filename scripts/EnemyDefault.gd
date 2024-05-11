@@ -91,20 +91,20 @@ func _ready() -> void:
 #region Sample State setup.
 	# a sample State setup that creates two StateActions using functions in this class, adds them to the State, and adds the State to us, starting the state machine.
 	# TODO: Turn this into an easier to use API.
-	var action_print_str: StateAction = StateAction.new(sample_action, ["Ayooooo.", " Bruh"])
-	var action_increment_int: StateAction = StateAction.new(sample_tick_action, [1], true)
-	var actions_arr: Array[StateAction] = [action_print_str, action_increment_int]
-	var test_state: State = State.new(movement_state, actions_arr, test_to_dummy_rule, test_to_dummy_trans)
-	
-	var action_death: StateAction = StateAction.new(death_action)
-	var death_state: State = State.new(EnemyMovementState.DEAD, [action_death], death_rule, death_trans)
-	
-	var action_dummy: StateAction = StateAction.new(dummy_action)
-	var dummy_state: State = State.new(EnemyMovementState.STUN, [action_dummy], dummy_breakout_rule, dummy_breakout_trans)
-	var dummy_sm: StateMachine = StateMachine.new([dummy_state], dummy_sm_to_death_rule, dummy_sm_to_death_trans)
-	
-	var test_state_machine: StateMachine = StateMachine.new([test_state, dummy_sm, death_state])
-	add_child(test_state_machine) # begins execution
+	#var action_print_str: StateAction = StateAction.new(sample_action, ["Ayooooo.", " Bruh"])
+	#var action_increment_int: StateAction = StateAction.new(sample_tick_action, [1], true)
+	#var actions_arr: Array[StateAction] = [action_print_str, action_increment_int]
+	#var test_state: State = State.new(movement_state, actions_arr, test_to_dummy_rule, test_to_dummy_trans)
+	#
+	#var action_death: StateAction = StateAction.new(death_action)
+	#var death_state: State = State.new(EnemyMovementState.DEAD, [action_death], death_rule, death_trans)
+	#
+	#var action_dummy: StateAction = StateAction.new(dummy_action)
+	#var dummy_state: State = State.new(EnemyMovementState.STUN, [action_dummy], dummy_breakout_rule, dummy_breakout_trans)
+	#var dummy_sm: StateMachine = StateMachine.new([dummy_state], dummy_sm_to_death_rule, dummy_sm_to_death_trans)
+	#
+	#var test_state_machine: StateMachine = StateMachine.new([test_state, dummy_sm, death_state])
+	#add_child(test_state_machine) # begins execution
 
 # a sample action that prints two strings put together.
 func sample_action(args: Array) -> void:

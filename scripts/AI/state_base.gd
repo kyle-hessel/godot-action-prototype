@@ -40,6 +40,12 @@ var pos: int = 0
 
 signal state_complete
 
+func _ready() -> void:
+	if !trans_rule_data.is_empty():
+		trans_rule = Callable(get_node(trans_rule_data[0]), trans_rule_data[1])
+	if !trans_data.is_empty():
+		trans = Callable(get_node(trans_data[0]), trans_data[1])
+
 func consider_transition() -> void:
 	# call the transition rule Callable and store its result.
 	print("trans rule is called.")

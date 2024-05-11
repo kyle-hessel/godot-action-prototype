@@ -7,7 +7,7 @@ class_name State
 @export var state_actions: Array[StateAction]
 
 # If the State's variables are not initialized with exports, then they will be initialized in init() instead, such as when being created at runtime.
-func _init(_type: int, _actions: Array[StateAction], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
+func _init(_type: int = 0, _actions: Array[StateAction] = [], _trans_rule: Callable = _trans_rule_test, _trans: Callable = _trans_test) -> void:
 	state_type = _type # this is for classification used in the owning StateGraph.
 	state_actions = _actions
 	trans_rule = _trans_rule
@@ -17,10 +17,7 @@ func _init(_type: int, _actions: Array[StateAction], _trans_rule: Callable = _tr
 		add_child(action)
 
 func _ready() -> void:
-	if !trans_rule_data.is_empty():
-		trans_rule = Callable(get_node(trans_rule_data[0]), trans_rule_data[1])
-	if !trans_data.is_empty():
-		trans = Callable(get_node(trans_data[0]), trans_data[1])
+	super()
 	
 	#execute_state_context() # NOTE: Debug only.
 
